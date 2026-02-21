@@ -1,0 +1,27 @@
+# ft_transcendence
+
+## Dependencies
+.env
+node_modules/
+__pycache__/
+*.pyc
+
+## SSL
+ssl/server.crt
+ssl/server.key
+
+## Docker volumes
+db_user_data/
+db_stats_data/
+redis_data/
+
+## IDE
+.vscode/
+.idea/
+
+## OS
+.DS_Store
+Thumbs.db
+
+## Media uploads
+auth_service/media/
