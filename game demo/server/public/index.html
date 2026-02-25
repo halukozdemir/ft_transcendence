@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Haxball Test Client</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #1a1a2e;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            font-family: 'Segoe UI', sans-serif;
+            color: #fff;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+            font-size: 20px;
+            color: #e94560;
+        }
+
+        #info {
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: #aaa;
+        }
+
+        #score {
+            font-size: 28px;
+            margin-bottom: 10px;
+            letter-spacing: 8px;
+        }
+
+        .red {
+            color: #e94560;
+        }
+
+        .blue {
+            color: #0f3460;
+        }
+
+        canvas {
+            border: 2px solid #e94560;
+            border-radius: 8px;
+            background: #16213e;
+        }
+
+        #status {
+            margin-top: 10px;
+            font-size: 13px;
+            color: #888;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>⚽ Haxball Test Client</h1>
+    <div id="info">WASD veya Ok tuşlarıyla hareket et</div>
+    <div id="score">
+        <span class="red" id="redScore">0</span>
+        &nbsp;-&nbsp;
+        <span class="blue" id="blueScore">0</span>
+    </div>
+    <canvas id="game" width="800" height="500"></canvas>
+    <div id="status">Bağlanıyor...</div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const canvas = document.getElementById('game')
+        const ctx = canvas.getContext('2d')
+        const statusEl = document.getElementById('status')
+        const redScoreEl = document.getElementById('redScore')
+        const blueScoreEl = document.getElementById('blueScore')
+
+        const socket = io()
+        let myTeam = null
+        let latestState = null
+
+        // --- Connection ---
+        socket.on('joined', (data) => {
+            myTeam = data.team
+            statusEl.textContent = `Bağlandı! Takım: ${myTeam.toUpperCase()}`
+            statusEl.style.color = myTeam === 'red' ? '#e94560' : '#4a90d9'
+        })
+
+        socket.on('room_full', () => {
+            statusEl.textContent = 'Oda dolu! Maksimum 2 oyuncu.'
+            statusEl.style.color = '#ff6b6b'
+        })
+
+        socket.on('state', (state) => {
+            latestState = state
+        })
+
+        socket.on('disconnect', () => {
+            statusEl.textContent = 'Bağlantı kesildi.'
+            statusEl.style.color = '#ff6b6b'
+        })
+
+        // --- Input ---
+        const keys = {}
+
+        window.addEventListener('keydown', (e) => {
+            keys[e.key] = true
+            sendInput()
+        })
+
+        window.addEventListener('keyup', (e) => {
+            keys[e.key] = false
+            sendInput()
+        })
+
+        function sendInput() {
+            socket.emit('input', {
+                up: keys['ArrowUp'] || keys['w'] || keys['W'] || false,
+                down: keys['ArrowDown'] || keys['s'] || keys['S'] || false,
+                left: keys['ArrowLeft'] || keys['a'] || keys['A'] || false,
+                right: keys['ArrowRight'] || keys['d'] || keys['D'] || false,
+            })
+        }
+
+        // --- Render Loop ---
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+            if (!latestState) {
+                ctx.fillStyle = '#888'
+                ctx.font = '18px Segoe UI'
+                ctx.textAlign = 'center'
+                ctx.fillText('Sunucuya bağlanıyor...', canvas.width / 2, canvas.height / 2)
+                requestAnimationFrame(draw)
+                return
+            }
+
+            const { players, ball, score, field } = latestState
+
+            // Update score display
+            redScoreEl.textContent = score.red
+            blueScoreEl.textContent = score.blue
+
+            // Draw field
+            drawField(field)
+
+            // Draw players
+            for (const id in players) {
+                const p = players[id]
+                const isMe = (p.team === myTeam)
+
+                // Player circle
+                ctx.beginPath()
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2)
+                ctx.fillStyle = p.team === 'red' ? '#e94560' : '#4a90d9'
+                ctx.fill()
+                ctx.strokeStyle = isMe ? '#fff' : 'rgba(255,255,255,0.3)'
+                ctx.lineWidth = isMe ? 3 : 1
+                ctx.stroke()
+
+                // "YOU" label
+                if (isMe) {
+                    ctx.fillStyle = '#fff'
+                    ctx.font = 'bold 10px Segoe UI'
+                    ctx.textAlign = 'center'
+                    ctx.fillText('SEN', p.x, p.y - p.radius - 6)
+                }
+            }
+
+            // Draw ball
+            ctx.beginPath()
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2)
+            ctx.fillStyle = '#fff'
+            ctx.fill()
+            ctx.strokeStyle = '#ccc'
+            ctx.lineWidth = 1
+            ctx.stroke()
+
+            requestAnimationFrame(draw)
+        }
+
+        function drawField(field) {
+            const { width, height, goalHeight } = field
+            const goalTop = (height - goalHeight) / 2
+            const goalBottom = (height + goalHeight) / 2
+
+            // Center line
+            ctx.setLineDash([5, 5])
+            ctx.strokeStyle = 'rgba(255,255,255,0.15)'
+            ctx.lineWidth = 1
+            ctx.beginPath()
+            ctx.moveTo(width / 2, 0)
+            ctx.lineTo(width / 2, height)
+            ctx.stroke()
+
+            // Center circle
+            ctx.beginPath()
+            ctx.arc(width / 2, height / 2, 50, 0, Math.PI * 2)
+            ctx.stroke()
+            ctx.setLineDash([])
+
+            // Goals — left (red)
+            ctx.strokeStyle = '#e94560'
+            ctx.lineWidth = 4
+            ctx.beginPath()
+            ctx.moveTo(0, goalTop)
+            ctx.lineTo(0, goalBottom)
+            ctx.stroke()
+
+            // Goals — right (blue)
+            ctx.strokeStyle = '#4a90d9'
+            ctx.lineWidth = 4
+            ctx.beginPath()
+            ctx.moveTo(width, goalTop)
+            ctx.lineTo(width, goalBottom)
+            ctx.stroke()
+
+            // Goal area backgrounds
+            ctx.fillStyle = 'rgba(233, 69, 96, 0.08)'
+            ctx.fillRect(0, goalTop, 30, goalHeight)
+            ctx.fillStyle = 'rgba(74, 144, 217, 0.08)'
+            ctx.fillRect(width - 30, goalTop, 30, goalHeight)
+        }
+
+        requestAnimationFrame(draw)
+    </script>
+</body>
+
+</html>
