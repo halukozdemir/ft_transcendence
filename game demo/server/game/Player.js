@@ -9,6 +9,8 @@ class Player {
     this.speed = 0.5
     this.team = team // "red" or "blue"
     this.input = {}
+    this.kickRadius = 25 // Vuruş menzili
+    this.kickPower = 8 // Vuruş gücü
   }
 
   update(fieldWidth, fieldHeight) {

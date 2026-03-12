@@ -1,6 +1,6 @@
 const Player = require("./Player")
 const Ball = require("./Ball")
-const { checkCollision } = require("./physics")
+const { checkCollision, handleKick, checkPlayerCollision } = require("./physics")
 
 class GameRoom {
     constructor() {
@@ -44,7 +44,29 @@ class GameRoom {
         // Update all players
         Object.values(this.players).forEach((player) => {
             player.update(this.width, this.height)
-            checkCollision(player, this.ball)
+        })
+
+        // Oyuncu-Oyuncu çarpışmalarını kontrol et
+        const playerArray = Object.values(this.players)
+        for (let i = 0; i < playerArray.length; i++) {
+            for (let j = i + 1; j < playerArray.length; j++) {
+                checkPlayerCollision(playerArray[i], playerArray[j])
+            }
+        }
+
+        // Top sürme (Dribbling) - Çoklu iterasyon ile sıkışmayı önle
+        // 5 iterasyon ile daha sağlam ayrılma
+        for (let iteration = 0; iteration < 5; iteration++) {
+            Object.values(this.players).forEach((player) => {
+                checkCollision(player, this.ball)
+            })
+        }
+        
+        // Topa vurma (Kicking) - sadece X tuşuna basıldığında
+        Object.values(this.players).forEach((player) => {
+            if (player.input.kick) {
+                handleKick(player, this.ball)
+            }
         })
 
         // Update ball

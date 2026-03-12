@@ -64,7 +64,7 @@
 
 <body>
     <h1>⚽ Haxball Test Client</h1>
-    <div id="info">WASD veya Ok tuşlarıyla hareket et</div>
+    <div id="info">WASD/Ok tuşları: Hareket | X: Şut/Vurma</div>
     <div id="score">
         <span class="red" id="redScore">0</span>
         &nbsp;-&nbsp;
@@ -81,7 +81,9 @@
         const redScoreEl = document.getElementById('redScore')
         const blueScoreEl = document.getElementById('blueScore')
 
-        const socket = io()
+        const socket = io('http://localhost:3000', {
+            transports: ['websocket', 'polling']
+        })
         let myTeam = null
         let latestState = null
 
@@ -125,6 +127,7 @@
                 down: keys['ArrowDown'] || keys['s'] || keys['S'] || false,
                 left: keys['ArrowLeft'] || keys['a'] || keys['A'] || false,
                 right: keys['ArrowRight'] || keys['d'] || keys['D'] || false,
+                kick: keys['x'] || keys['X'] || false, // Vuruş tuşu (X)
             })
         }
 
