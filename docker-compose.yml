@@ -144,7 +144,7 @@ services:
       retries: 10
     restart: unless-stopped
 
-  # PostgreSQL for Game (stats data)
+  # Game DB
   db_stats:
     image: postgres:16-alpine
     container_name: ft_db_stats
