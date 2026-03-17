@@ -53,9 +53,9 @@ clean-volumes:
 migrate-auth:
 	docker-compose exec auth_service python manage.py migrate
 
-# Run migrations for game service
-migrate-game:
-	docker-compose exec game_service python manage.py migrate
+# Run migrations for chat service
+migrate-chat:
+	docker-compose exec chat_service python manage.py migrate
 
 # Create superuser for auth service
 superuser:
@@ -79,6 +79,7 @@ help:
 	@echo "  make restart    - Restart all services"
 	@echo "  make logs       - View logs for all services"
 	@echo "  make logs-auth_service  - View logs for auth service"
+	@echo "  make migrate-chat      - Run migrations for chat service"
 	@echo "  make clean      - Remove everything (containers, volumes, images)"
 	@echo "  make status     - Show status of all containers"
 	@echo "  make superuser  - Create Django superuser (auth)"

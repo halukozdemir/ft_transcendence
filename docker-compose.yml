@@ -23,6 +23,7 @@ services:
       - auth_service
       - game_service
       - ai_service
+      - chat_service
     networks:
       - frontend_net
       - backend_net
@@ -57,18 +58,33 @@ services:
       - backend_net
     restart: unless-stopped
 
-  # ========== 4. Game Service (Django Channels + Daphne) ==========
+  # ========== 4. Game Service (Node.js + Express + Socket.io) ==========
   game_service:
     build:
       context: ./game_service
       dockerfile: Dockerfile
     container_name: ft_game
-    entrypoint: ["/bin/bash", "/app/entrypoint.sh"]
-    command: ["daphne", "-b", "0.0.0.0", "-p", "8001", "game_project.asgi:application"]
     env_file:
       - .env
     depends_on:
-      db_stats:
+      redis_broker:
+        condition: service_healthy
+    networks:
+      - backend_net
+    restart: unless-stopped
+
+  # ========== 5. Chat Service (Django Channels + Daphne) ==========
+  chat_service:
+    build:
+      context: ./chat_service
+      dockerfile: Dockerfile
+    container_name: ft_chat
+    entrypoint: ["/bin/bash", "/app/entrypoint.sh"]
+    command: ["daphne", "-b", "0.0.0.0", "-p", "8003", "chat_project.asgi:application"]
+    env_file:
+      - .env
+    depends_on:
+      db_chat:
         condition: service_healthy
       redis_broker:
         condition: service_healthy
@@ -76,7 +92,7 @@ services:
       - backend_net
     restart: unless-stopped
 
-  # ========== 5. AI Service (FastAPI + Uvicorn) ==========
+  # ========== 6. AI Service (FastAPI + Uvicorn) ==========
   ai_service:
     build:
       context: ./ai_service
@@ -104,6 +120,25 @@ services:
       - backend_net
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER_USER} -d ${POSTGRES_USER_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # PostgreSQL for Chat
+  db_chat:
+    image: postgres:16-alpine
+    container_name: ft_db_chat
+    environment:
+      POSTGRES_DB: ${POSTGRES_CHAT_DB}
+      POSTGRES_USER: ${POSTGRES_CHAT_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_CHAT_PASSWORD}
+    volumes:
+      - db_chat_data:/var/lib/postgresql/data
+    networks:
+      - backend_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_CHAT_USER} -d ${POSTGRES_CHAT_DB}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -147,6 +182,8 @@ services:
 # ========== Volumes ==========
 volumes:
   db_user_data:
+    driver: local
+  db_chat_data:
     driver: local
   db_stats_data:
     driver: local

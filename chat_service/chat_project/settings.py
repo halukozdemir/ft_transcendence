@@ -3,6 +3,7 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# ---------- Core ----------
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'insecure-dev-key')
 DEBUG = os.environ.get('DEBUG', '0') == '1'
 ALLOWED_HOSTS = ['*']
@@ -16,14 +17,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    # Third-party
-    'channels',
     'rest_framework',
-    # Local
-    'game_app',
+    'corsheaders',
+    'chat_app',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -33,7 +33,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'game_project.urls'
+ROOT_URLCONF = 'chat_project.urls'
 
 TEMPLATES = [
     {
@@ -51,40 +51,39 @@ TEMPLATES = [
     },
 ]
 
-ASGI_APPLICATION = 'game_project.asgi.application'
+ASGI_APPLICATION = 'chat_project.asgi.application'
 
-# ---------- Database (Stats DB) ----------
+# ---------- Database ----------
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('POSTGRES_STATS_DB', 'ft_stats_db'),
-        'USER': os.environ.get('POSTGRES_STATS_USER', 'ft_stats'),
-        'PASSWORD': os.environ.get('POSTGRES_STATS_PASSWORD', 'devpassword'),
-        'HOST': os.environ.get('POSTGRES_STATS_HOST', 'db_stats'),
-        'PORT': os.environ.get('POSTGRES_STATS_PORT', '5432'),
+        'NAME': os.environ.get('POSTGRES_CHAT_DB', 'ft_chat_db'),
+        'USER': os.environ.get('POSTGRES_CHAT_USER', 'ft_chat'),
+        'PASSWORD': os.environ.get('POSTGRES_CHAT_PASSWORD', 'devpassword'),
+        'HOST': os.environ.get('POSTGRES_CHAT_HOST', 'db_chat'),
+        'PORT': os.environ.get('POSTGRES_CHAT_PORT', '5432'),
     }
 }
 
-# ---------- Channel Layers (Redis) ----------
-REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD', '')
-REDIS_HOST = os.environ.get('REDIS_HOST', 'redis_broker')
-REDIS_PORT = os.environ.get('REDIS_PORT', '6379')
-
+# ---------- Redis Channel Layer ----------
 CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            'hosts': [f'redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/0'],
+            'hosts': [(
+                os.environ.get('REDIS_HOST', 'redis_broker'),
+                int(os.environ.get('REDIS_PORT', 6379)),
+            )],
+            'password': os.environ.get('REDIS_PASSWORD', ''),
         },
     },
 }
 
-# ---------- REST Framework ----------
-REST_FRAMEWORK = {
-    'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.AllowAny',
-    ),
-}
+# ---------- CORS ----------
+CORS_ALLOWED_ORIGINS = [
+    'https://localhost',
+    'https://127.0.0.1',
+]
 
 # ---------- i18n ----------
 LANGUAGE_CODE = 'en-us'
