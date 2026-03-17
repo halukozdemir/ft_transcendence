@@ -4,8 +4,8 @@ FROM node:20-alpine
 WORKDIR /app
 
 # Install dependencies first (layer caching)
-COPY package.json package-lock.json* ./
-RUN npm ci --silent
+COPY package.json ./
+RUN npm install --silent
 
 # Copy project
 COPY . .
