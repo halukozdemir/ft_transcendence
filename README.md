@@ -124,8 +124,13 @@ ft_transcendence/
 │   └── requirements.txt
 ├── game_service/         # Node.js - Game Engine
 │   ├── Dockerfile
-│   ├── server.js
-│   └── package.json
+│   ├── server.js         # Express + Socket.io server
+│   ├── package.json
+│   └── game/             # Oyun motoru (game-demo'dan)
+│       ├── GameRoom.js   # Oda yonetimi, skor, reset
+│       ├── Player.js     # Oyuncu fizigi, input
+│       ├── Ball.js       # Top fizigi
+│       └── physics.js    # Carpisma, vuruş, momentum
 ├── chat_service/         # Django Channels - Chat
 │   ├── Dockerfile
 │   ├── chat_project/     # Django settings
@@ -134,7 +139,8 @@ ft_transcendence/
 ├── ai_service/           # FastAPI - AI Moderation
 │   ├── Dockerfile
 │   └── app/main.py
-├── docs/                 # Proje dökümanları
+├── docs/                 # Proje dokümanlari
+│   └── ARCHITECTURE.md   # Detayli mimari dokumantasyon
 ├── ssl/                  # SSL sertifikaları (gitignore)
 ├── docker-compose.yml
 ├── Makefile
@@ -160,10 +166,12 @@ ft_transcendence/
 - [ ] Profil ve avatar yönetimi
 
 ### Adım 3: Oyun Çekirdeği
-- [ ] Socket.io ile client-server iletişimi
-- [ ] 60 FPS server-side game loop
-- [ ] Fizik motoru (top, oyuncu, çarpışma)
-- [ ] Client tarafında Canvas render
+- [x] Socket.io ile client-server iletişimi
+- [x] 60 FPS server-side game loop
+- [x] Fizik motoru (top, oyuncu, çarpışma)
+- [x] Client tarafında Canvas render
+- [ ] JWT token ile oyuncu doğrulama
+- [ ] Maç sonucu kaydetme
 
 ### Adım 4: Oda ve Eşleşme
 - [ ] Room ID ile oda oluşturma/katılma

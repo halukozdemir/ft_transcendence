@@ -1,62 +1,66 @@
-# ft_transcendence - Yapılacaklar Listesi
+# ft_transcendence - Yapilacaklar Listesi
 
-## Altyapı & DevOps (furkan)
-- [x] Docker Compose: Tüm servisler tanımlı
-- [x] Gateway (Nginx): Reverse proxy, SSL, WebSocket desteği
-- [x] SSL sertifikası oluşturma scripti
-- [x] Makefile komutları
-- [x] .env dosyasını git'ten kaldır (güvenlik)
-- [x] Chat Service container'ını docker-compose'a ekle
-- [x] Frontend Dockerfile'ı Vite için güncelle
-- [x] Game Service'i Node.js (Express + Socket.io) ortamına çevir
-- [ ] CI/CD pipeline (GitHub Actions) - ileride değerlendirilecek
-- [ ] game-demo branch'indeki node_modules temizliği
+> Son guncelleme: 2026-03-17
 
-## Auth Service (Backend - Django)
-- [ ] User modeli oluştur (username, email, avatar, online_status vb.)
-- [ ] Register endpoint (POST /api/auth/register)
-- [ ] Login endpoint (POST /api/auth/login) - JWT token döndür
-- [ ] Token refresh endpoint
+---
+
+## ADIM 1: Altyapi (Infrastructure) - furkan
+- [x] Docker Compose ile tum servisleri tanimla
+- [x] Nginx Gateway (SSL, reverse proxy, WebSocket routing)
+- [x] PostgreSQL veritabanlari (db_user, db_stats, db_chat)
+- [x] Redis broker
+- [x] SSL sertifika scripti (generate_ssl.sh)
+- [x] Makefile komutlari
+- [x] Chat Service container & Django scaffolding
+- [x] Game Service: Django -> Node.js donusumu
+- [x] Game-demo kodlarini game_service'e entegre et
+- [x] Frontend'e oyun client'i ekle (Socket.io + Canvas)
+- [ ] `docker-compose up --build` ile tum servislerin hatasiz kalkmasi
+- [ ] Frontend branch merge sonrasi Vite Dockerfile guncellemesi
+- [ ] game-demo branch'indeki node_modules temizligi
+
+## ADIM 2: Kullanici Yonetimi (Auth Service - Django)
+- [ ] User modeli (username, email, avatar, online_status)
+- [ ] Register endpoint (POST /api/auth/register/)
+- [ ] Login endpoint (POST /api/auth/login/) - JWT token
+- [ ] Token refresh (POST /api/auth/token/refresh/)
 - [ ] 42 OAuth entegrasyonu
-- [ ] Profil görüntüleme / güncelleme endpoint'leri
-- [ ] Avatar yükleme endpoint'i
-- [ ] Arkadaş ekleme / engelleme sistemi
+- [ ] Profil goruntuleme/guncelleme (GET/PUT /api/auth/profile/)
+- [ ] Avatar yukleme (POST /api/auth/profile/avatar/)
+- [ ] Frontend: Login & Register sayfalari
+- [ ] Frontend: Profil sayfasi
 
-## Game Service (Backend - Node.js + Socket.io)
-- [ ] game-demo kodlarını game_service'e entegre et
-- [ ] 60 FPS server-side game loop
-- [ ] Fizik motoru (çarpışma, top hareketi, duvar sekmeleri)
-- [ ] Oda oluşturma / katılma sistemi (Room ID)
-- [ ] Harita seçimi (JSON config)
-- [ ] Maç sonu skor kaydetme (db_stats)
-- [ ] Oyuncu input yönetimi (WASD)
-- [ ] Gol / kazanan belirleme mantığı
+## ADIM 3: Oyun Cekirdegi (Game Service - Node.js)
+- [x] Socket.io altyapisi
+- [x] 60 FPS server-side game loop
+- [x] Fizik motoru (Ball, Player, physics)
+- [x] Client-side Canvas render
+- [ ] JWT token ile oyuncu dogrulama
+- [ ] Oyuncu isimleri gosterimi
+- [ ] Gol sonrasi skor kaydetme (db_stats)
+- [ ] Mac bitis kosulu ve sonuc kaydi
 
-## Chat & Social Service (Backend - Django)
-- [ ] Mesaj modeli oluştur
-- [ ] Kanal/oda modeli
-- [ ] WebSocket ile gerçek zamanlı mesajlaşma
-- [ ] DM (direkt mesaj) desteği
-- [ ] AI content moderation entegrasyonu
-- [ ] Arkadaşlık isteği sistemi (auth service ile iletişim)
+## ADIM 4: Oda ve Eslestirme
+- [ ] Room ID ile oda olusturma/katilma
+- [ ] Oda listesi API
+- [ ] Harita secimi
+- [ ] Frontend: Lobi sayfasi
 
-## AI Service (FastAPI)
-- [ ] POST /analyze/text - mesaj moderasyonu
-- [ ] POST /analyze/image - avatar güvenlik kontrolü
-- [ ] ML model entegrasyonu veya harici API bağlantısı
+## ADIM 5: Chat ve Sosyal (Chat Service - Django Channels)
+- [ ] WebSocket sohbet
+- [ ] DM destegi
+- [ ] Arkadaslik ve engelleme sistemi
+- [ ] AI mesaj moderasyonu
+- [ ] Frontend: Chat paneli
 
-## Frontend (React + Vite + TypeScript + Tailwind)
-- [ ] Router yapısı (react-router-dom)
-- [ ] Login / Register sayfaları
-- [ ] Profil sayfası
-- [ ] Oyun lobisi (oda listesi, oda oluşturma)
-- [ ] Oyun ekranı (Canvas render)
-- [ ] Chat arayüzü
-- [ ] Skor tablosu / istatistikler sayfası
-- [ ] Responsive tasarım
-
-## Son Aşama (Cila)
-- [ ] Hata yönetimi ve loading ekranları
+## ADIM 6: Istatistikler ve Basarimlar
+- [ ] MatchHistory modeli (db_stats)
+- [ ] Skor tablosu ve mac gecmisi API
 - [ ] Achievements sistemi
-- [ ] Deployment testi (docker-compose up --build)
-- [ ] Tüm servisler arası entegrasyon testi
+- [ ] Frontend: Istatistik sayfasi
+
+## ADIM 7: Cila (Polish)
+- [ ] Avatar AI kontrolu
+- [ ] UI/UX iyilestirmeleri
+- [ ] Responsive tasarim
+- [ ] Production build & test
