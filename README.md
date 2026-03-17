@@ -1,4 +1,4 @@
-# ft_transcendence: Haxball Klonu
+# ft_transcendence
 
 **Proje:** Web-Based Multiplayer Haxball Oyunu
 **Mimari:** Microservices (Docker)
