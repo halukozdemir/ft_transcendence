@@ -19,6 +19,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'corsheaders',
+    'rest_framework_simplejwt.token_blacklist',
     'auth_app',
 ]
 
@@ -93,6 +94,8 @@ SIMPLE_JWT = {
     ),
     'SIGNING_KEY': os.environ.get('JWT_SECRET_KEY', SECRET_KEY),
     'AUTH_HEADER_TYPES': ('Bearer',),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
 }
 
 # ---------- CORS ----------
@@ -119,3 +122,5 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+AUTH_USER_MODEL = 'auth_app.User'
