@@ -11,7 +11,9 @@ from .views import(
     PasswordChangeView,
     AddFriendView,
     RemoveFriendView,
-    FriendListView
+    FriendListView,
+    OAuth42RedirectView,
+    OAuth42CallbackView,
 )
 
 def health(request):
@@ -30,5 +32,6 @@ urlpatterns = [
     path('friends/', FriendListView.as_view(), name='friend-list'),
     path('friends/add/', AddFriendView.as_view(), name='add-friend'),
     path('friends/remove/', RemoveFriendView.as_view(), name='remove-friend'),
-    
+    path('oauth/42/', OAuth42RedirectView.as_view(), name='oauth-42'),
+    path('oauth/callback/', OAuth42CallbackView.as_view(), name='oauth-callback'),
 ]

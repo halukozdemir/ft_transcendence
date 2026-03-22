@@ -4,6 +4,9 @@ from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate, get_user_model
+import requests
+from django.conf import settings
+from django.shortcuts import redirect
 
 from .serializers import(
     RegisterSerializer,
@@ -190,3 +193,85 @@ class FriendListView(generics.ListAPIView):
 
     def get_queryset(self):
         return self.request.user.friends.all()
+
+# ──────────────── OAuth 42: Redirect ────────────────
+class OAuth42RedirectView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        authorize_url = (
+            "https://api.intra.42.fr/oauth/authorize"
+            f"?client_id={settings.OAUTH_42_CLIENT_ID}"
+            f"&redirect_uri={settings.OAUTH_42_REDIRECT_URI}"
+            "&response_type=code"
+            "&scope=public"
+        )
+        return redirect(authorize_url)
+
+# ──────────────── OAuth 42: Callback ────────────────
+class OAuth42CallbackView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        code = request.query_params.get('code')
+        if not code:
+            return Response(
+                {'detail': 'Code parameter missing.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        token_response = request.post(
+            "https://api.intra.42.fr/oauth/token",
+            data={
+                'grant_type': 'authorizantion_code',
+                'client_id': settings.OAUTH_42_CLIENT_ID,
+                'client_secret': settings.OAUTH_42_CLIENT_SECRET,
+                'code': code,
+                'redirect_uri': settings.OAUTH_42_REDIRECT_URI,
+            }
+        )
+
+        if token_response.status_code != 200:
+            return Response(
+                {'detail': '42 token exchange failed.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        access_token = token_response.json().get('access_token')
+
+        user_response = request.get(
+            "https://api.intra.42.fr/v2/me",
+            headers={'Authorization': f'Bearer {access_token}'}
+        )
+
+        if user_response.status_code != 200:
+            return Response(
+                {'detail': '42 user info fetch failed.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        data=user_response.json()
+        intra_id = data['id']
+        emaill = data['email']
+        username = data['login']
+
+        user = User.object.filter(intra_id=intra_id.first())
+
+        if not user:
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                intra_id=intra_id,
+                password=None,
+            )
+
+        user.online_status = True
+        user.save(update_fields=['online_status'])
+
+        refresh = RefreshToken.for_user(user)
+        frontend_url = (
+            f"https://{settings.DOMAIN}/oauth/callback"
+            f"?access={str(refresh.access_token)}"
+            f"&refresh={str(refresh)}"
+        )
+        return redirect(frontend_url)

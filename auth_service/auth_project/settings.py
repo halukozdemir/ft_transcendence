@@ -8,6 +8,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'insecure-dev-key')
 DEBUG = os.environ.get('DEBUG', '0') == '1'
 ALLOWED_HOSTS = ['*']
+DOMAIN = os.environ.get('DOMAIN', 'localhost')
 
 # ---------- Apps ----------
 INSTALLED_APPS = [
