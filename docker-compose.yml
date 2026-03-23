@@ -52,7 +52,7 @@ services:
     env_file:
       - .env
     depends_on:
-      db_user:
+      postgres:
         condition: service_healthy
     networks:
       - backend_net
@@ -84,7 +84,7 @@ services:
     env_file:
       - .env
     depends_on:
-      db_chat:
+      postgres:
         condition: service_healthy
       redis_broker:
         condition: service_healthy
@@ -106,58 +106,21 @@ services:
 
   # ========== Databases & Infrastructure ==========
 
-  # PostgreSQL for Auth (user data)
-  db_user:
+  # PostgreSQL (tek instance — auth, chat, stats DB'leri icinde)
+  postgres:
     image: postgres:16-alpine
-    container_name: ft_db_user
+    container_name: ft_postgres
     environment:
-      POSTGRES_DB: ${POSTGRES_USER_DB}
-      POSTGRES_USER: ${POSTGRES_USER_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_USER_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - db_user_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
       - backend_net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER_USER} -d ${POSTGRES_USER_DB}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-    restart: unless-stopped
-
-  # PostgreSQL for Chat
-  db_chat:
-    image: postgres:16-alpine
-    container_name: ft_db_chat
-    environment:
-      POSTGRES_DB: ${POSTGRES_CHAT_DB}
-      POSTGRES_USER: ${POSTGRES_CHAT_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_CHAT_PASSWORD}
-    volumes:
-      - db_chat_data:/var/lib/postgresql/data
-    networks:
-      - backend_net
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_CHAT_USER} -d ${POSTGRES_CHAT_DB}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-    restart: unless-stopped
-
-  # Game DB
-  db_stats:
-    image: postgres:16-alpine
-    container_name: ft_db_stats
-    environment:
-      POSTGRES_DB: ${POSTGRES_STATS_DB}
-      POSTGRES_USER: ${POSTGRES_STATS_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_STATS_PASSWORD}
-    volumes:
-      - db_stats_data:/var/lib/postgresql/data
-    networks:
-      - backend_net
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_STATS_USER} -d ${POSTGRES_STATS_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -181,11 +144,7 @@ services:
 
 # ========== Volumes ==========
 volumes:
-  db_user_data:
-    driver: local
-  db_chat_data:
-    driver: local
-  db_stats_data:
+  postgres_data:
     driver: local
   redis_data:
     driver: local

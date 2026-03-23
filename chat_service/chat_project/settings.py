@@ -57,11 +57,11 @@ ASGI_APPLICATION = 'chat_project.asgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('POSTGRES_CHAT_DB', 'ft_chat_db'),
-        'USER': os.environ.get('POSTGRES_CHAT_USER', 'ft_chat'),
-        'PASSWORD': os.environ.get('POSTGRES_CHAT_PASSWORD', 'devpassword'),
-        'HOST': os.environ.get('POSTGRES_CHAT_HOST', 'db_chat'),
-        'PORT': os.environ.get('POSTGRES_CHAT_PORT', '5432'),
+        'NAME': os.environ.get('POSTGRES_DB', 'ft_transcendence'),
+        'USER': os.environ.get('POSTGRES_USER', 'ft_user'),
+        'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'devpassword'),
+        'HOST': os.environ.get('POSTGRES_HOST', 'postgres'),
+        'PORT': os.environ.get('POSTGRES_PORT', '5432'),
     }
 }
 

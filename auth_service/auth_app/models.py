@@ -6,27 +6,6 @@ class User(AbstractUser):
     avatar = models.ImageField(
         upload_to='avatars/',
         default='avatars/default.png',
-        blank=True,
-    )
-    online_status = models.BooleanField(default=False)
-    friends = models.ManyToManyField(
-        'self',
-        blank=True,
-        symmetrical=False,#ileride arkadaşlık isteği gönderme ve kabul etme gibi özellikler eklemek istediğimizde bu alanı kullanacağız
-        related_name='friend_of'
-    )
-
-    USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['username']
-
-    def __str__(self):
-        return self.username
-    
-class User(AbstractUser):
-    email = models.EmailField(unique=True)
-    avatar = models.ImageField(
-        upload_to='avatars/',
-        default='avatars/default.png',
         blank=True
     )
     online_status = models.BooleanField(default=False)

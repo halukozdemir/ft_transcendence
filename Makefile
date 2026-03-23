@@ -2,7 +2,7 @@
 # ft_transcendence - Makefile
 # ============================================
 
-.PHONY: all build up down restart logs clean ssl help
+.PHONY: all build up down restart logs clean ssl help test test-auth
 
 # Default target
 all: ssl build up
@@ -61,6 +61,18 @@ migrate-chat:
 superuser:
 	docker-compose exec auth_service python manage.py createsuperuser
 
+# Run all tests
+test:
+	docker-compose exec auth_service python manage.py test auth_app.tests -v 2
+
+# Run auth tests only (specific file: make test-auth T=test_login)
+test-auth:
+ifdef T
+	docker-compose exec auth_service python manage.py test auth_app.tests.$(T) -v 2
+else
+	docker-compose exec auth_service python manage.py test auth_app.tests -v 2
+endif
+
 # Check status of all services
 status:
 	docker-compose ps
@@ -83,4 +95,6 @@ help:
 	@echo "  make clean      - Remove everything (containers, volumes, images)"
 	@echo "  make status     - Show status of all containers"
 	@echo "  make superuser  - Create Django superuser (auth)"
+	@echo "  make test       - Run all auth tests"
+	@echo "  make test-auth T=test_login  - Run specific test file"
 	@echo ""

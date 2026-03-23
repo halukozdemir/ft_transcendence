@@ -47,12 +47,16 @@ io.on("connection", (socket) => {
   });
 });
 
-// 60 FPS game loop
-const TICK_RATE = 1000 / 60;
+// Physics at 60 FPS, network broadcast at 30 FPS
+const PHYSICS_RATE = 1000 / 60;
+let tick = 0;
 setInterval(() => {
   room.update();
-  io.emit("state", room.getState());
-}, TICK_RATE);
+  tick++;
+  if (tick % 2 === 0) {
+    io.emit("state", room.getState());
+  }
+}, PHYSICS_RATE);
 
 const PORT = process.env.GAME_SERVICE_PORT || 8001;
 server.listen(PORT, "0.0.0.0", () => {
