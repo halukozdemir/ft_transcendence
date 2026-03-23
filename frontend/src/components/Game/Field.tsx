@@ -1,38 +1,14 @@
-// ── Constants ──────────────────────────────────────────────────────────────
+import { CX, CY, CR, FX, FY, FW, FH, GW, GH, GY } from "../../game/constants";
 
-const W  = 1200;
-const H  = 700;
-
-// Field rect
-const FX = 90;
-const FY = 50;
-const FW = 1020;
-const FH = 600;
-
-// Goal
-const GW = 36;
-const GH = 168;
-const GY = FY + (FH - GH) / 2;
-
-// Center
-const CX = W / 2;
-const CY = H / 2;
-const CR = 90; // circle radius
-
-// Stroke tokens
+// ── Stroke tokens ────────────────────────────────────────────────────────────
 const LINE = { stroke: "white", strokeOpacity: 0.1,  strokeWidth: 2, fill: "none" } as const;
 const GOAL = { stroke: "white", strokeOpacity: 0.25, strokeWidth: 2              } as const;
 
-// ── Component ──────────────────────────────────────────────────────────────
+// ── Field background + markings (no <svg> root — lives inside GameCanvas) ───
 
 export default function Field() {
   return (
-    <svg
-      viewBox={`0 0 ${W} ${H}`}
-      preserveAspectRatio="xMidYMid meet"
-      className="w-full h-full"
-      xmlns="http://www.w3.org/2000/svg"
-    >
+    <g>
       {/* ── Field surface ── */}
       <rect
         x={FX} y={FY} width={FW} height={FH}
@@ -69,18 +45,17 @@ export default function Field() {
       <CornerArc x={FX + FW} y={FY}      sweep={0} />
       <CornerArc x={FX}      y={FY + FH} sweep={0} />
       <CornerArc x={FX + FW} y={FY + FH} sweep={1} />
-    </svg>
+    </g>
   );
 }
 
-// ── Corner arc helper ──────────────────────────────────────────────────────
+// ── Corner arc helper ────────────────────────────────────────────────────────
 
 const ARC_R = 22;
 
 function CornerArc({ x, y, sweep }: { x: number; y: number; sweep: 0 | 1 }) {
   const dx = x === FX ? ARC_R : -ARC_R;
   const dy = y === FY ? ARC_R : -ARC_R;
-  // arc from (x, y+dy) to (x+dx, y) — quarter circle
   return (
     <path
       d={`M ${x} ${y + dy} A ${ARC_R} ${ARC_R} 0 0 ${sweep} ${x + dx} ${y}`}
