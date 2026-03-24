@@ -9,7 +9,7 @@ const SERVER_H = 500;
 
 // How far behind real-time we render (ms).
 // Absorbs WiFi jitter by always having 2+ snapshots to interpolate between.
-const RENDER_DELAY = 100;
+const INITIAL_RENDER_DELAY = 100;
 
 function getOrCreateClientId(): string {
   const key = "ft_game_client_id";
@@ -85,6 +85,9 @@ export function useGameSocket() {
   const [connected, setConnected] = useState(false);
   const bufferRef = useRef<Snapshot[]>([]);
   const rafRef = useRef<number>(0);
+  const renderDelayRef = useRef(INITIAL_RENDER_DELAY);
+  const packetTimesRef = useRef<number[]>([]);
+  const lastRawRef = useRef<any>(null);
 
   // For server clock sync
   const serverOffsetRef = useRef<number | null>(null);
@@ -111,14 +114,17 @@ export function useGameSocket() {
       const serverTime = raw.meta?.serverTimeMs || performance.now();
       const clientTime = performance.now();
 
-      // Simple clock sync: offset = serverTime - clientTime
-      // We take the minimum offset to avoid network delay bias
       const currentOffset = serverTime - clientTime;
       if (serverOffsetRef.current === null) {
         serverOffsetRef.current = currentOffset;
       } else {
-        // Slow smoothing of offset
         serverOffsetRef.current = serverOffsetRef.current * 0.99 + currentOffset * 0.01;
+      }
+
+      lastRawRef.current = raw;
+      packetTimesRef.current.push(clientTime);
+      if (packetTimesRef.current.length > 120) {
+        packetTimesRef.current = packetTimesRef.current.slice(-60);
       }
 
       bufferRef.current.push({
@@ -126,7 +132,6 @@ export function useGameSocket() {
         time: serverTime,
       });
 
-      // Keep buffer bounded
       if (bufferRef.current.length > 60) {
         bufferRef.current = bufferRef.current.slice(-30);
       }
@@ -147,7 +152,7 @@ export function useGameSocket() {
 
       if (buffer.length >= 2 && offset !== null) {
         const currentServerTime = performance.now() + offset;
-        const renderTime = currentServerTime - RENDER_DELAY;
+        const renderTime = currentServerTime - renderDelayRef.current;
 
         // Find two snapshots straddling renderTime
         let from: Snapshot | null = null;
@@ -199,5 +204,19 @@ export function useGameSocket() {
     };
   }, []);
 
-  return { state, myPlayerId, connected, socket: socketRef };
+  const debug = {
+    getPacketRate: () => {
+      const times = packetTimesRef.current;
+      if (times.length < 2) return 0;
+      const span = (times[times.length - 1] - times[0]) / 1000;
+      return span > 0 ? Math.round((times.length - 1) / span) : 0;
+    },
+    getBufferSize: () => bufferRef.current.length,
+    getServerOffset: () => serverOffsetRef.current,
+    getRenderDelay: () => renderDelayRef.current,
+    setRenderDelay: (v: number) => { renderDelayRef.current = v; },
+    getLastRaw: () => lastRawRef.current,
+  };
+
+  return { state, myPlayerId, connected, socket: socketRef, debug };
 }

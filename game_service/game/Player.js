@@ -7,6 +7,7 @@ class Player {
     this.vy = 0
     this.radius = 15
     this.speed = 0.5
+    this.friction = 0.9
     this.team = team // "red" or "blue"
     this.input = {}
     this.kickRadius = 25 // Vuruş menzili
@@ -25,8 +26,8 @@ class Player {
     this.y += this.vy
 
     // Friction
-    this.vx *= 0.9
-    this.vy *= 0.9
+    this.vx *= this.friction
+    this.vy *= this.friction
 
     // Clamp to field boundaries
     this.x = Math.max(this.radius, Math.min(fieldWidth - this.radius, this.x))

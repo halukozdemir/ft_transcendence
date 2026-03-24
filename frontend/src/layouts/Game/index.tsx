@@ -1,10 +1,11 @@
 import Chat from "../../components/Game/Chat";
 import GameScreen from "../../components/Game/Screen";
+import DebugPanel from "../../components/Game/DebugPanel";
 import { useGameSocket } from "../../hooks/useGameSocket";
 import { useGameInput } from "../../hooks/useGameInput";
 
 const GameLayout = () => {
-	const { state, myPlayerId, socket } = useGameSocket();
+	const { state, myPlayerId, connected, socket, debug } = useGameSocket();
 	useGameInput(socket);
 
 	return (
@@ -17,6 +18,7 @@ const GameLayout = () => {
 					<Chat/>
 				</div>
 			</div>
+			<DebugPanel socketRef={socket} debug={debug} connected={connected} />
 		</div>
 	);
 }

@@ -3,6 +3,7 @@ class Ball {
         this.fieldWidth = fieldWidth
         this.fieldHeight = fieldHeight
         this.radius = 10
+        this.friction = 0.99
         this.reset()
     }
 
@@ -18,8 +19,8 @@ class Ball {
         this.y += this.vy
 
         // Friction
-        this.vx *= 0.99
-        this.vy *= 0.99
+        this.vx *= this.friction
+        this.vy *= this.friction
 
         // Hız çok düşükse sıfırla (stabilite için)
         if (Math.abs(this.vx) < 0.01) this.vx = 0

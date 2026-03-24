@@ -85,7 +85,12 @@ class GameRoom {
         const x = team === "red" ? 200 : this.width - 200
         const y = this.height / 2
 
-        this.players[id] = new Player(id, x, y, team)
+        const player = new Player(id, x, y, team)
+        if (this._dbgPlayerSpeed !== undefined) player.speed = this._dbgPlayerSpeed
+        if (this._dbgKickPower !== undefined) player.kickPower = this._dbgKickPower
+        if (this._dbgKickRadius !== undefined) player.kickRadius = this._dbgKickRadius
+        if (this._dbgPlayerFriction !== undefined) player.friction = this._dbgPlayerFriction
+        this.players[id] = player
         this.socketToClient[id] = clientId
         this.clientToSocket[clientId] = id
         this.clientTeam[clientId] = team

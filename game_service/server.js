@@ -98,6 +98,28 @@ io.on("connection", (socket) => {
     room.forfeit(socket.id);
   });
 
+  socket.on("debug:config", (config) => {
+    if (config.playerSpeed !== undefined) {
+      Object.values(room.players).forEach((p) => (p.speed = config.playerSpeed));
+      room._dbgPlayerSpeed = config.playerSpeed;
+    }
+    if (config.kickPower !== undefined) {
+      Object.values(room.players).forEach((p) => (p.kickPower = config.kickPower));
+      room._dbgKickPower = config.kickPower;
+    }
+    if (config.kickRadius !== undefined) {
+      Object.values(room.players).forEach((p) => (p.kickRadius = config.kickRadius));
+      room._dbgKickRadius = config.kickRadius;
+    }
+    if (config.playerFriction !== undefined) {
+      Object.values(room.players).forEach((p) => (p.friction = config.playerFriction));
+      room._dbgPlayerFriction = config.playerFriction;
+    }
+    if (config.ballFriction !== undefined) {
+      room.ball.friction = config.ballFriction;
+    }
+  });
+
   socket.on("disconnect", () => {
     console.log("Disconnected:", socket.id);
     room.removePlayer(socket.id);
