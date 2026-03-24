@@ -220,10 +220,10 @@ class OAuth42CallbackView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        token_response = request.post(
+        token_response = requests.post(
             "https://api.intra.42.fr/oauth/token",
             data={
-                'grant_type': 'authorizantion_code',
+                'grant_type': 'authorization_code',
                 'client_id': settings.OAUTH_42_CLIENT_ID,
                 'client_secret': settings.OAUTH_42_CLIENT_SECRET,
                 'code': code,
@@ -239,7 +239,7 @@ class OAuth42CallbackView(APIView):
 
         access_token = token_response.json().get('access_token')
 
-        user_response = request.get(
+        user_response = requests.get(
             "https://api.intra.42.fr/v2/me",
             headers={'Authorization': f'Bearer {access_token}'}
         )
@@ -252,10 +252,10 @@ class OAuth42CallbackView(APIView):
         
         data=user_response.json()
         intra_id = data['id']
-        emaill = data['email']
+        email = data['email']
         username = data['login']
 
-        user = User.object.filter(intra_id=intra_id.first())
+        user = User.objects.filter(intra_id=intra_id).first()
 
         if not user:
             user = User.objects.create_user(
