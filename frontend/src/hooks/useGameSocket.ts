@@ -7,6 +7,15 @@ import { FX, FY, FW, FH } from "../game/constants";
 const SERVER_W = 800;
 const SERVER_H = 500;
 
+function getOrCreateClientId(): string {
+  const key = "ft_game_client_id";
+  const existing = sessionStorage.getItem(key);
+  if (existing) return existing;
+  const id = crypto.randomUUID();
+  sessionStorage.setItem(key, id);
+  return id;
+}
+
 function transformState(raw: any): GameState {
   const players = Object.values(raw.players || {}).map((p: any) => ({
     id: p.id,
@@ -27,7 +36,7 @@ function transformState(raw: any): GameState {
       redTeamName: "Red",
       blueTeamName: "Blue",
       round: 1,
-      timeLeft: 0,
+      timeLeft: raw.match?.timeRemainingSeconds ?? 0,
     },
   };
 }
@@ -39,9 +48,12 @@ export function useGameSocket() {
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
+    const clientId = getOrCreateClientId();
+
     const socket = io(window.location.origin, {
       path: "/ws/game/",
-      transports: ["websocket", "polling"],
+      transports: ["websocket"],
+      auth: { clientId },
     });
     socketRef.current = socket;
 

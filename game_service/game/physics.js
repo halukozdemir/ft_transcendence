@@ -53,14 +53,25 @@ function handleKick(player, ball) {
     const dx = ball.x - player.x
     const dy = ball.y - player.y
     const distance = Math.sqrt(dx * dx + dy * dy)
+    const kickReach = player.kickRadius + 3
 
-    if (distance < player.kickRadius && distance > 0) {
+    if (distance <= kickReach && distance > 0) {
         const nx = dx / distance
         const ny = dy / distance
 
         const momentumBoost = 1.5
         ball.vx += nx * player.kickPower + player.vx * momentumBoost
         ball.vy += ny * player.kickPower + player.vy * momentumBoost
+        return
+    }
+
+    if (distance === 0) {
+        const speed = Math.sqrt(player.vx * player.vx + player.vy * player.vy)
+        const nx = speed > 0 ? player.vx / speed : player.team === "red" ? 1 : -1
+        const ny = speed > 0 ? player.vy / speed : 0
+
+        ball.vx += nx * player.kickPower
+        ball.vy += ny * player.kickPower
     }
 }
 

@@ -7,33 +7,43 @@ interface InputState {
   down: boolean;
   left: boolean;
   right: boolean;
-  kick: boolean;
 }
 
-const KEY_MAP: Record<string, keyof InputState> = {
+const MOVE_KEYS: Record<string, keyof InputState> = {
   ArrowUp: "up",    w: "up",    W: "up",
   ArrowDown: "down",  s: "down",  S: "down",
   ArrowLeft: "left",  a: "left",  A: "left",
   ArrowRight: "right", d: "right", D: "right",
-  x: "kick", X: "kick",
 };
+
+const KICK_KEYS = new Set(["x", "X"]);
 
 export function useGameInput(socketRef: MutableRefObject<Socket | null>) {
   const inputRef = useRef<InputState>({
-    up: false, down: false, left: false, right: false, kick: false,
+    up: false, down: false, left: false, right: false,
   });
 
   useEffect(() => {
-    function handleKey(e: KeyboardEvent, pressed: boolean) {
-      const action = KEY_MAP[e.key];
+    function onDown(e: KeyboardEvent) {
+      if (KICK_KEYS.has(e.key) && !e.repeat) {
+        e.preventDefault();
+        socketRef.current?.emit("kick");
+        return;
+      }
+      const action = MOVE_KEYS[e.key];
       if (!action) return;
       e.preventDefault();
-      inputRef.current[action] = pressed;
+      inputRef.current[action] = true;
       socketRef.current?.emit("input", { ...inputRef.current });
     }
 
-    const onDown = (e: KeyboardEvent) => handleKey(e, true);
-    const onUp = (e: KeyboardEvent) => handleKey(e, false);
+    function onUp(e: KeyboardEvent) {
+      const action = MOVE_KEYS[e.key];
+      if (!action) return;
+      e.preventDefault();
+      inputRef.current[action] = false;
+      socketRef.current?.emit("input", { ...inputRef.current });
+    }
 
     window.addEventListener("keydown", onDown);
     window.addEventListener("keyup", onUp);
