@@ -391,6 +391,29 @@ class GameRoom {
         }
     }
 
+    getBroadcastState() {
+        return {
+            players: Object.values(this.players).map((p) => ({
+                id: p.id,
+                team: p.team,
+                x: p.x,
+                y: p.y,
+            })),
+            ball: {
+                x: this.ball.x,
+                y: this.ball.y,
+            },
+            score: this.score,
+            match: {
+                status: this.match.status,
+                timeRemainingSeconds: this.getTimeRemainingSeconds(),
+            },
+            meta: {
+                serverTimeMs: Date.now(),
+            },
+        }
+    }
+
     getState() {
         return {
             players: this.players,

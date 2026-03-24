@@ -11,7 +11,7 @@ app.use(express.json());
 const scoreLimit = Number(process.env.GAME_SCORE_LIMIT) || 5;
 const timeLimitSeconds = Number(process.env.GAME_TIME_LIMIT_SECONDS) || 180;
 const simulationFps = Number(process.env.GAME_SIMULATION_FPS) || 60;
-const broadcastFps = Number(process.env.GAME_BROADCAST_FPS) || 60;
+const broadcastFps = Number(process.env.GAME_BROADCAST_FPS) || 30;
 
 // Health check
 app.get("/api/game/health/", (req, res) => {
@@ -118,7 +118,7 @@ setInterval(() => {
 }, simulationTickMs);
 
 setInterval(() => {
-  io.emit("state", room.getState());
+  io.emit("state", room.getBroadcastState());
 }, broadcastTickMs);
 
 const PORT = process.env.GAME_SERVICE_PORT || 8001;
