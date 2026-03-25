@@ -20,42 +20,50 @@ interface SystemMessage {
 
 type Message = PlayerMessage | SystemMessage;
 
+interface ChatProps {
+  roomName?: string;
+  username?: string;
+}
+
 const TEAM_COLOR: Record<TeamColor, string> = {
   red:       "text-team-red",
   blue:      "text-team-blue",
   spectator: "text-spectator",
 };
 
-const MOCK_MESSAGES: Message[] = [
-  { type: "player", id: "1", timestamp: "12:04", sender: "ProStriker",  team: "red",       content: "What a save!"         },
-  { type: "player", id: "2", timestamp: "12:05", sender: "CyberGoalie", team: "blue",      content: "Calculated."          },
-  { type: "system", id: "3", content: "Red Team leading by 1 point."                                                        },
-  { type: "player", id: "4", timestamp: "12:06", sender: "ProStriker",  team: "red",       content: "Rematch after this?"  },
-  { type: "player", id: "5", timestamp: "12:07", sender: "Spectator99", team: "spectator", content: "GG WP"                },
-  { type: "player", id: "1", timestamp: "12:04", sender: "ProStriker",  team: "red",       content: "What a save!"         },
-  { type: "player", id: "2", timestamp: "12:05", sender: "CyberGoalie", team: "blue",      content: "Calculated."          },
-  { type: "system", id: "3", content: "Red Team leading by 1 point."                                                        },
-  { type: "player", id: "4", timestamp: "12:06", sender: "ProStriker",  team: "red",       content: "Rematch after this?"  },
-  { type: "player", id: "5", timestamp: "12:07", sender: "Spectator99", team: "spectator", content: "GG WP"                },
-  { type: "player", id: "1", timestamp: "12:04", sender: "ProStriker",  team: "red",       content: "What a save!"         },
-  { type: "player", id: "2", timestamp: "12:05", sender: "CyberGoalie", team: "blue",      content: "Calculated."          },
-  { type: "system", id: "3", content: "Red Team leading by 1 point."                                                        },
-  { type: "player", id: "4", timestamp: "12:06", sender: "ProStriker",  team: "red",       content: "Rematch after this?"  },
-  { type: "player", id: "5", timestamp: "12:07", sender: "Spectator99", team: "spectator", content: "GG WP"                },
-];
-
 const GHOST_DURATION = 5000;
 const GHOST_COUNT    = 5;
 
 type Ghost = Message & { ghostKey: string };
 
-export default function Chat() {
-  const [messages]          = useState<Message[]>(MOCK_MESSAGES);
+type WsPayload = {
+  message?: string;
+  sender?: string;
+  timestamp?: string;
+};
+
+function createId() {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function createTimestamp() {
+  return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+function sanitizeRoomName(roomName: string) {
+  const normalized = roomName.replace(/\W+/g, "_");
+  return normalized || "lobby";
+}
+
+export default function Chat({ roomName = "game", username = "Player" }: ChatProps) {
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput]   = useState("");
   const [focused, setFocused] = useState(false);
   const [open, setOpen]     = useState(true);
   const [ghosts, setGhosts] = useState<Ghost[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+  const socketRef = useRef<WebSocket | null>(null);
+  const [connected, setConnected] = useState(false);
 
   // Enter key focuses input
   useEffect(() => {
@@ -80,11 +88,89 @@ export default function Chat() {
     setGhosts(recent);
     const t = setTimeout(() => setGhosts([]), GHOST_DURATION);
     return () => clearTimeout(t);
-  }, [open]);
+  }, [open, messages]);
+
+  useEffect(() => {
+    const room = sanitizeRoomName(roomName);
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    const socket = new WebSocket(`${protocol}://${window.location.host}/ws/chat/${room}/`);
+
+    socketRef.current = socket;
+
+    socket.onopen = () => {
+      setConnected(true);
+      setMessages((prev) => [
+        ...prev,
+        { type: "system", id: createId(), content: `Connected to room: ${room}` },
+      ]);
+    };
+
+    socket.onmessage = (event) => {
+      try {
+        const data: WsPayload = JSON.parse(event.data);
+        const message = data.message?.trim();
+        if (!message) return;
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            type: "player",
+            id: createId(),
+            timestamp: data.timestamp || createTimestamp(),
+            sender: data.sender || "anonymous",
+            team: "spectator",
+            content: message,
+          },
+        ]);
+      } catch {
+        setMessages((prev) => [
+          ...prev,
+          { type: "system", id: createId(), content: "Invalid message payload received." },
+        ]);
+      }
+    };
+
+    socket.onclose = () => {
+      setConnected(false);
+      setMessages((prev) => [
+        ...prev,
+        { type: "system", id: createId(), content: "Chat connection closed." },
+      ]);
+    };
+
+    socket.onerror = () => {
+      setMessages((prev) => [
+        ...prev,
+        { type: "system", id: createId(), content: "Chat connection error." },
+      ]);
+    };
+
+    return () => {
+      socket.close();
+      socketRef.current = null;
+    };
+  }, [roomName]);
 
   const handleSend = () => {
-    if (!input.trim()) return;
-    // TODO: emit via WebSocket
+    const message = input.trim();
+    if (!message) return;
+
+    if (socketRef.current?.readyState !== WebSocket.OPEN) {
+      setMessages((prev) => [
+        ...prev,
+        { type: "system", id: createId(), content: "Socket is not connected yet." },
+      ]);
+      return;
+    }
+
+    socketRef.current.send(
+      JSON.stringify({
+        message,
+        sender: username,
+        timestamp: createTimestamp(),
+      })
+    );
+
     setInput("");
   };
 
@@ -151,7 +237,9 @@ export default function Chat() {
                 aria-label="Minimize chat"
                 className="w-full flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-white/5 transition-colors"
               >
-                <span className="text-xs font-semibold text-muted uppercase tracking-widest">Chat</span>
+                <span className="text-xs font-semibold text-muted uppercase tracking-widest">
+                  Chat {connected ? "(online)" : "(offline)"}
+                </span>
                 <LuChevronDown className="w-4 h-4 text-muted" />
               </button>
 

@@ -18,6 +18,15 @@ const MOVE_KEYS: Record<string, keyof InputState> = {
 
 const KICK_KEYS = new Set(["x", "X"]);
 
+function isEditableTarget(target: EventTarget | null): boolean {
+  const el = target as HTMLElement | null;
+  if (!el) return false;
+  if (el.isContentEditable) return true;
+
+  const tag = el.tagName;
+  return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+}
+
 export function useGameInput(socketRef: MutableRefObject<Socket | null>) {
   const inputRef = useRef<InputState>({
     up: false, down: false, left: false, right: false,
@@ -25,6 +34,8 @@ export function useGameInput(socketRef: MutableRefObject<Socket | null>) {
 
   useEffect(() => {
     function onDown(e: KeyboardEvent) {
+      if (isEditableTarget(e.target)) return;
+
       if (KICK_KEYS.has(e.key) && !e.repeat) {
         e.preventDefault();
         socketRef.current?.emit("kick");
@@ -38,6 +49,8 @@ export function useGameInput(socketRef: MutableRefObject<Socket | null>) {
     }
 
     function onUp(e: KeyboardEvent) {
+      if (isEditableTarget(e.target)) return;
+
       const action = MOVE_KEYS[e.key];
       if (!action) return;
       e.preventDefault();
