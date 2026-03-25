@@ -213,12 +213,20 @@ const DashboardPage = () => {
           <span>Version: XXX</span>
         </div>
         <div className="hidden gap-4 md:flex">
-          <a className="transition-colors hover:text-white" href="#">
+          <button
+            className="transition-colors hover:text-white"
+            onClick={() => navigate("/privacy")}
+            type="button"
+          >
             Privacy
-          </a>
-          <a className="transition-colors hover:text-white" href="#">
+          </button>
+          <button
+            className="transition-colors hover:text-white"
+            onClick={() => navigate("/terms")}
+            type="button"
+          >
             Terms
-          </a>
+          </button>
           <a className="transition-colors hover:text-white" href="#">
             Discord Community
           </a>

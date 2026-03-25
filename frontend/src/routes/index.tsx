@@ -5,6 +5,8 @@ import ProfilePage from "../presentation/pages/Profile";
 import AuthPage from "../presentation/pages/Auth";
 import LeaderboardPage from "../presentation/pages/Leaderboard";
 import ReplaysPage from "../presentation/pages/Replays";
+import TermsPage from "../presentation/pages/Terms";
+import PrivacyPage from "../presentation/pages/Privacy";
 import ProtectedRoute from "../presentation/components/auth/ProtectedRoute";
 
 const router = createBrowserRouter([
@@ -49,6 +51,22 @@ const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         <ReplaysPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/terms",
+    element: (
+      <ProtectedRoute>
+        <TermsPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/privacy",
+    element: (
+      <ProtectedRoute>
+        <PrivacyPage />
       </ProtectedRoute>
     ),
   },
