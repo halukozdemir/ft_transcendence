@@ -1,11 +1,12 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap");
 @import "tailwindcss";
 
 @theme {
 	/* ── Backgrounds ──────────────────────────── */
-	--color-bg:          #101022; /* page background          */
-	--color-surface:     #16162e; /* card / panel background  */
-	--color-surface-alt: #1e1b4b; /* elevated surface (system msg, hover) */
+	--color-bg:          #0e0e0e; /* page background          */
+	--color-surface:     #181818; /* card / panel background  */
+	--color-surface-alt: #222222; /* elevated surface (system msg, hover) */
 
 	/* ── Team & Role Colors ───────────────────── */
 	--color-team-red:    #ff4040; /* red team player name     */
@@ -14,8 +15,8 @@
 
 	/* ── UI Colors ───────────────────────────── */
 	--color-system:      #818cf8; /* system message accent    */
-	--color-muted:       #4b5272; /* timestamps, placeholders */
-	--color-border:      #2d2b52; /* dividers, subtle borders */
+	--color-muted:       #4b5563; /* timestamps, placeholders */
+	--color-border:      #272727; /* dividers, subtle borders */
 }
 
 @layer base {

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
-import type { GameState, PlayerState, BallState } from "../game/types";
-import { FX, FY, FW, FH } from "../game/constants";
+import type { GameState, PlayerState, BallState } from "../types/game";
+import { FX, FY, FW, FH } from "../constants/game";
 
 // Backend field dimensions
 const SERVER_W = 800;

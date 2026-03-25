@@ -1,9 +1,9 @@
-import Chat from "../../components/Game/Chat";
-import GameScreen from "../../components/Game/Screen";
-import DebugPanel from "../../components/Game/DebugPanel";
+import Chat from "../../components/game/Chat";
+import GameScreen from "../../components/game/Screen";
+import DebugPanel from "../../components/game/DebugPanel";
 import { useGameSocket } from "../../hooks/useGameSocket";
 import { useGameInput } from "../../hooks/useGameInput";
-import { useAuth } from "../../infrastructure/auth/authContext";
+import { useAuth } from "../../context/authContext";
 
 const GameLayout = () => {
 	const { accessToken } = useAuth();

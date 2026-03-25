@@ -1,13 +1,21 @@
 import { createBrowserRouter } from "react-router";
+import MainLayout from "../layouts/Main";
 import GameLayout from "../layouts/Game";
-import DashboardPage from "../presentation/pages/Dashboard";
-import ProfilePage from "../presentation/pages/Profile";
-import AuthPage from "../presentation/pages/Auth";
-import LeaderboardPage from "../presentation/pages/Leaderboard";
-import ReplaysPage from "../presentation/pages/Replays";
-import TermsPage from "../presentation/pages/Terms";
-import PrivacyPage from "../presentation/pages/Privacy";
-import ProtectedRoute from "../presentation/components/auth/ProtectedRoute";
+import DashboardPage from "../pages/Dashboard";
+import ProfilePage from "../pages/Profile";
+import AuthPage from "../pages/Auth";
+import LeaderboardPage from "../pages/Leaderboard";
+import ReplaysPage from "../pages/Replays";
+import SettingsPage from "../pages/Settings";
+import TermsPage from "../pages/Terms";
+import PrivacyPage from "../pages/Privacy";
+import ProtectedRoute from "../components/auth/ProtectedRoute";
+
+const withLayout = (element: React.ReactNode) => (
+  <ProtectedRoute>
+    <MainLayout>{element}</MainLayout>
+  </ProtectedRoute>
+);
 
 const router = createBrowserRouter([
   {
@@ -16,19 +24,11 @@ const router = createBrowserRouter([
   },
   {
     path: "/",
-    element: (
-      <ProtectedRoute>
-        <DashboardPage />
-      </ProtectedRoute>
-    ),
+    element: withLayout(<DashboardPage />),
   },
   {
     path: "/profile",
-    element: (
-      <ProtectedRoute>
-        <ProfilePage />
-      </ProtectedRoute>
-    ),
+    element: withLayout(<ProfilePage />),
   },
   {
     path: "/game",
@@ -40,35 +40,23 @@ const router = createBrowserRouter([
   },
   {
     path: "/leaderboard",
-    element: (
-      <ProtectedRoute>
-        <LeaderboardPage />
-      </ProtectedRoute>
-    ),
+    element: withLayout(<LeaderboardPage />),
   },
   {
     path: "/replays",
-    element: (
-      <ProtectedRoute>
-        <ReplaysPage />
-      </ProtectedRoute>
-    ),
+    element: withLayout(<ReplaysPage />),
   },
   {
     path: "/terms",
-    element: (
-      <ProtectedRoute>
-        <TermsPage />
-      </ProtectedRoute>
-    ),
+    element: withLayout(<TermsPage />),
   },
   {
     path: "/privacy",
-    element: (
-      <ProtectedRoute>
-        <PrivacyPage />
-      </ProtectedRoute>
-    ),
+    element: withLayout(<PrivacyPage />),
+  },
+  {
+    path: "/settings",
+    element: withLayout(<SettingsPage />),
   },
 ]);
 
