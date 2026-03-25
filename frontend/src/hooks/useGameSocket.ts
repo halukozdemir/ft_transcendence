@@ -200,7 +200,7 @@ export function useGameSocket(accessToken?: string | null) {
       cancelAnimationFrame(rafRef.current);
       socket.disconnect();
     };
-  }, []);
+  }, [accessToken]);
 
   const debug = {
     getPacketRate: () => {

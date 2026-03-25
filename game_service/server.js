@@ -13,7 +13,7 @@ const scoreLimit = Number(process.env.GAME_SCORE_LIMIT) || 5;
 const timeLimitSeconds = Number(process.env.GAME_TIME_LIMIT_SECONDS) || 180;
 const simulationFps = Number(process.env.GAME_SIMULATION_FPS) || 60;
 const broadcastFps = Number(process.env.GAME_BROADCAST_FPS) || 30;
-const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-key";
+const JWT_SECRET = process.env.JWT_SECRET_KEY || process.env.JWT_SECRET || "dev-secret-key";
 
 // Health check
 app.get("/api/game/health/", (req, res) => {
@@ -21,7 +21,8 @@ app.get("/api/game/health/", (req, res) => {
 });
 
 app.get("/api/game/render-config/", (req, res) => {
-  const state = room.getState();
+  const tempRoom = new GameRoom({ scoreLimit, timeLimitSeconds });
+  const state = tempRoom.getState();
   res.json({
     simulationFps,
     broadcastFps,
@@ -88,37 +89,85 @@ io.use((socket, next) => {
   }
 });
 
-const room = new GameRoom({ scoreLimit, timeLimitSeconds });
+// ── Multi-room matchmaking ──────────────────────────────────────────────────
+
+const rooms = new Map();        // roomId -> GameRoom
+const socketRoom = new Map();   // socket.id -> roomId
+let roomCounter = 0;
+
+function createRoom() {
+  const roomId = `room_${++roomCounter}`;
+  const room = new GameRoom({ scoreLimit, timeLimitSeconds });
+  room.id = roomId;
+  rooms.set(roomId, room);
+  console.log(`Oda olusturuldu: ${roomId}`);
+  return room;
+}
+
+function findWaitingRoom() {
+  for (const [, room] of rooms) {
+    if (room.match.status === "waiting" && room.playerCount < 2) {
+      return room;
+    }
+  }
+  return null;
+}
+
+function cleanupRoom(roomId) {
+  const room = rooms.get(roomId);
+  if (room && room.playerCount === 0) {
+    rooms.delete(roomId);
+    console.log(`Oda silindi: ${roomId}`);
+  }
+}
 
 io.on("connection", (socket) => {
-  console.log("Connected:", socket.id, "User:", socket.userId);
+  console.log("Baglandi:", socket.id, "User:", socket.userId);
 
   const clientId = socket.userId || socket.id;
 
-  const existingSocketId = room.getSocketIdByClientId(clientId);
-  if (existingSocketId && existingSocketId !== socket.id) {
-    room.removePlayer(existingSocketId, { suppressMatchEnd: true });
-    const existingSocket = io.sockets.sockets.get(existingSocketId);
-    if (existingSocket) {
-      existingSocket.disconnect(true);
+  // Onceki baglantisi varsa temizle
+  for (const [existingRoomId, room] of rooms) {
+    const existingSocketId = room.getSocketIdByClientId(clientId);
+    if (existingSocketId && existingSocketId !== socket.id) {
+      room.removePlayer(existingSocketId, { suppressMatchEnd: true });
+      socketRoom.delete(existingSocketId);
+      const existingSocket = io.sockets.sockets.get(existingSocketId);
+      if (existingSocket) {
+        existingSocket.leave(existingRoomId);
+        existingSocket.disconnect(true);
+      }
+      cleanupRoom(existingRoomId);
     }
+  }
+
+  // Quick match: bos oda bul veya yeni olustur
+  let room = findWaitingRoom();
+  if (!room) {
+    room = createRoom();
   }
 
   const added = room.addPlayer(socket.id, clientId);
   if (!added) {
-    console.log("Room full, rejecting:", socket.id);
+    console.log("Oda dolu, reddedildi:", socket.id);
     socket.emit("room_full");
     socket.disconnect();
     return;
   }
 
+  const roomId = room.id;
+  socketRoom.set(socket.id, roomId);
+  socket.join(roomId);
+
   socket.emit("joined", {
     team: room.players[socket.id].team,
+    roomId,
   });
 
-  console.log("Player joined", {
+  console.log("Oyuncu katildi", {
     socketId: socket.id,
     userId: socket.userId,
+    roomId,
     team: room.players[socket.id].team,
     playerCount: room.playerCount,
     matchStatus: room.match.status,
@@ -127,60 +176,75 @@ io.on("connection", (socket) => {
   socket.emit("state", room.getState());
 
   socket.on("input", (input) => {
-    room.handleInput(socket.id, input);
+    const r = rooms.get(socketRoom.get(socket.id));
+    if (r) r.handleInput(socket.id, input);
   });
 
   socket.on("kick", () => {
-    room.requestKick(socket.id);
+    const r = rooms.get(socketRoom.get(socket.id));
+    if (r) r.requestKick(socket.id);
   });
 
   socket.on("forfeit", () => {
-    room.forfeit(socket.id);
+    const r = rooms.get(socketRoom.get(socket.id));
+    if (r) r.forfeit(socket.id);
   });
 
   socket.on("debug:config", (config) => {
+    const r = rooms.get(socketRoom.get(socket.id));
+    if (!r) return;
     if (config.playerSpeed !== undefined) {
-      Object.values(room.players).forEach((p) => (p.speed = config.playerSpeed));
-      room._dbgPlayerSpeed = config.playerSpeed;
+      Object.values(r.players).forEach((p) => (p.speed = config.playerSpeed));
+      r._dbgPlayerSpeed = config.playerSpeed;
     }
     if (config.kickPower !== undefined) {
-      Object.values(room.players).forEach((p) => (p.kickPower = config.kickPower));
-      room._dbgKickPower = config.kickPower;
+      Object.values(r.players).forEach((p) => (p.kickPower = config.kickPower));
+      r._dbgKickPower = config.kickPower;
     }
     if (config.kickRadius !== undefined) {
-      Object.values(room.players).forEach((p) => (p.kickRadius = config.kickRadius));
-      room._dbgKickRadius = config.kickRadius;
+      Object.values(r.players).forEach((p) => (p.kickRadius = config.kickRadius));
+      r._dbgKickRadius = config.kickRadius;
     }
     if (config.playerFriction !== undefined) {
-      Object.values(room.players).forEach((p) => (p.friction = config.playerFriction));
-      room._dbgPlayerFriction = config.playerFriction;
+      Object.values(r.players).forEach((p) => (p.friction = config.playerFriction));
+      r._dbgPlayerFriction = config.playerFriction;
     }
     if (config.ballFriction !== undefined) {
-      room.ball.friction = config.ballFriction;
+      r.ball.friction = config.ballFriction;
     }
   });
 
   socket.on("disconnect", () => {
-    console.log("Disconnected:", socket.id);
-    room.removePlayer(socket.id);
-    console.log("Player removed", {
-      socketId: socket.id,
-      playerCount: room.playerCount,
-      matchStatus: room.match.status,
-    });
+    const rId = socketRoom.get(socket.id);
+    const r = rooms.get(rId);
+    if (r) {
+      r.removePlayer(socket.id);
+      console.log("Oyuncu ayrildi", {
+        socketId: socket.id,
+        roomId: rId,
+        playerCount: r.playerCount,
+      });
+      cleanupRoom(rId);
+    }
+    socketRoom.delete(socket.id);
   });
 });
 
-// Keep simulation and publish loops independent.
+// ── Simulation & broadcast ──────────────────────────────────────────────────
+
 const simulationTickMs = 1000 / simulationFps;
 const broadcastTickMs = 1000 / broadcastFps;
 
 setInterval(() => {
-  room.update();
+  for (const [, room] of rooms) {
+    room.update();
+  }
 }, simulationTickMs);
 
 setInterval(() => {
-  io.emit("state", room.getBroadcastState());
+  for (const [roomId, room] of rooms) {
+    io.to(roomId).emit("state", room.getBroadcastState());
+  }
 }, broadcastTickMs);
 
 const PORT = process.env.GAME_SERVICE_PORT || 8001;
