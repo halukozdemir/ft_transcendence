@@ -1,9 +1,11 @@
-from rest_framework import status, generics, permissions
+from rest_framework import status, generics, permissions, viewsets
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate, get_user_model
+from django.db.models import Q, Count, F, Case, When, IntegerField
 import requests
 from django.conf import settings
 from django.shortcuts import redirect
@@ -17,6 +19,7 @@ from .serializers import(
     FriendRequestSerializer,
     PasswordChangeSerializer,
 )
+from .models import PlayerStats, MatchRecord, Achievement, UserAchievement
 
 User = get_user_model()
 
@@ -29,6 +32,8 @@ class RegisterView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
+        # Create PlayerStats for new user
+        PlayerStats.objects.get_or_create(user=user)
         refresh = RefreshToken.for_user(user)
         return Response({
             'user': {
@@ -80,6 +85,8 @@ class LoginView(APIView):
     
 # ──────────────── Logout ────────────────
 class LogoutView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    
     def post(self, request):
         try:
             refresh_token = request.data.get('refresh')
@@ -95,12 +102,14 @@ class LogoutView(APIView):
 # ──────────────── Profile ────────────────
 class ProfileView(generics.RetrieveUpdateAPIView):
     serializer_class = ProfileSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_object(self):
         return self.request.user
     
 # ──────────────── Avatar Upload ────────────────
 class AvatarUploadView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
     parser_classes = [MultiPartParser]
 
     def put(self, request):
@@ -117,10 +126,142 @@ class AvatarUploadView(APIView):
 class UserDetailView(generics.RetrieveAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
+    permission_classes = [permissions.AllowAny]
     lookup_field = 'id'
+    lookup_url_kwarg = 'user_id'
+
+# ──────────────── User Stats ────────────────
+class UserStatsView(APIView):
+    """Get player statistics"""
+    permission_classes = [permissions.AllowAny]
+    
+    def get(self, request, user_id):
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        stats = PlayerStats.objects.get_or_create(user=user)[0]
+        
+        # Calculate ranking
+        total_players = User.objects.count()
+        higher_elo = User.objects.filter(stats__elo_rating__gt=stats.elo_rating).count()
+        ranking = higher_elo + 1
+        
+        return Response({
+            'user_id': user.id,
+            'username': user.username,
+            'total_matches': stats.total_matches,
+            'wins': stats.wins,
+            'losses': stats.losses,
+            'win_rate': stats.win_rate,
+            'elo_rating': stats.elo_rating,
+            'tier': user.tier,
+            'ranking': ranking,
+        })
+
+# ──────────────── User Match History ────────────────
+class UserMatchHistoryView(APIView):
+    """Get user's match history"""
+    permission_classes = [permissions.AllowAny]
+    
+    def get(self, request, user_id):
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        limit = int(request.query_params.get('limit', 20))
+        
+        # Get matches where user is player1 or player2
+        matches = MatchRecord.objects.filter(
+            Q(player1=user) | Q(player2=user)
+        ).order_by('-played_at')[:limit]
+        
+        result = []
+        for match in matches:
+            opponent = match.player2 if match.player1 == user else match.player1
+            is_player1 = match.player1 == user
+            my_score = match.score_p1 if is_player1 else match.score_p2
+            opponent_score = match.score_p2 if is_player1 else match.score_p1
+            
+            result.append({
+                'id': match.id,
+                'opponent_id': opponent.id,
+                'opponent_name': opponent.username,
+                'opponent_avatar': opponent.avatar.url if opponent.avatar else None,
+                'result': 'win' if match.winner == user else 'loss' if match.winner else 'draw',
+                'my_score': my_score,
+                'opponent_score': opponent_score,
+                'played_at': match.played_at.isoformat(),
+                'duration_seconds': match.duration_seconds,
+            })
+        
+        return Response(result)
+
+# ──────────────── User Achievements ────────────────
+class UserAchievementsView(APIView):
+    """Get user's achievements"""
+    permission_classes = [permissions.AllowAny]
+    
+    def get(self, request, user_id):
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        achievements = UserAchievement.objects.filter(user=user).select_related('achievement')
+        
+        result = []
+        for ua in achievements:
+            result.append({
+                'id': ua.achievement.id,
+                'name': ua.achievement.name,
+                'description': ua.achievement.description,
+                'icon_url': ua.achievement.icon_url,
+                'badge_type': ua.achievement.badge_type,
+                'unlocked_at': ua.unlocked_at.isoformat(),
+            })
+        
+        return Response(result)
+
+# ──────────────── Leaderboard ────────────────
+class LeaderboardView(APIView):
+    """Get global leaderboard"""
+    permission_classes = [permissions.AllowAny]
+    
+    def get(self, request):
+        limit = int(request.query_params.get('limit', 50))
+        
+        leaderboard = User.objects.annotate(
+            total_matches=Count('matches_as_p1') + Count('matches_as_p2'),
+            wins=Count(
+                Case(
+                    When(matches_won__isnull=False, then=1),
+                    output_field=IntegerField()
+                )
+            )
+        ).order_by('-stats__elo_rating')[:limit]
+        
+        result = []
+        for rank, user in enumerate(leaderboard, 1):
+            result.append({
+                'rank': rank,
+                'user_id': user.id,
+                'username': user.username,
+                'avatar': user.avatar.url if user.avatar else None,
+                'elo_rating': user.stats.elo_rating if hasattr(user, 'stats') else 1200,
+                'tier': user.tier,
+                'total_matches': user.total_matches,
+                'wins': user.wins,
+            })
+        
+        return Response(result)
 
 # ──────────────── Password Change ────────────────
 class PasswordChangeView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    
     def put(self, request):
         serializer = PasswordChangeSerializer(
             data=request.data,
@@ -135,6 +276,8 @@ class PasswordChangeView(APIView):
     
 # ──────────────── Add/Remove Friend ────────────────
 class AddFriendView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    
     def post(self, request):
         serializer = FriendRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -168,6 +311,8 @@ class AddFriendView(APIView):
         )
 
 class RemoveFriendView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    
     def post(self, request):
         serializer = FriendRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -189,6 +334,7 @@ class RemoveFriendView(APIView):
         )
     
 class FriendListView(generics.ListAPIView):
+    permission_classes = [permissions.IsAuthenticated]
     serializer_class = UserSerializer
 
     def get_queryset(self):
@@ -264,6 +410,8 @@ class OAuth42CallbackView(APIView):
                 intra_id=intra_id,
                 password=None,
             )
+            # Create PlayerStats for OAuth user
+            PlayerStats.objects.get_or_create(user=user)
 
         user.online_status = True
         user.save(update_fields=['online_status'])

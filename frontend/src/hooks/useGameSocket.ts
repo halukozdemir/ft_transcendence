@@ -11,15 +11,6 @@ const SERVER_H = 500;
 // Absorbs WiFi jitter by always having 2+ snapshots to interpolate between.
 const INITIAL_RENDER_DELAY = 100;
 
-function getOrCreateClientId(): string {
-  const key = "ft_game_client_id";
-  const existing = sessionStorage.getItem(key);
-  if (existing) return existing;
-  const id = crypto.randomUUID();
-  sessionStorage.setItem(key, id);
-  return id;
-}
-
 function transformState(raw: any): GameState {
   const players = Object.values(raw.players || {}).map((p: any) => ({
     id: p.id,
@@ -78,7 +69,7 @@ function interpolate(from: GameState, to: GameState, t: number): GameState {
   };
 }
 
-export function useGameSocket() {
+export function useGameSocket(accessToken?: string | null) {
   const socketRef = useRef<Socket | null>(null);
   const [state, setState] = useState<GameState | null>(null);
   const [myPlayerId, setMyPlayerId] = useState<string | null>(null);
@@ -93,12 +84,15 @@ export function useGameSocket() {
   const serverOffsetRef = useRef<number | null>(null);
 
   useEffect(() => {
-    const clientId = getOrCreateClientId();
+    if (!accessToken) {
+      console.warn("No access token provided to useGameSocket");
+      return;
+    }
 
     const socket = io(window.location.origin, {
       path: "/ws/game/",
       transports: ["websocket"],
-      auth: { clientId },
+      auth: { token: accessToken },
     });
     socketRef.current = socket;
 
@@ -143,6 +137,10 @@ export function useGameSocket() {
 
     socket.on("disconnect", () => {
       setConnected(false);
+    });
+
+    socket.on("error", (error) => {
+      console.error("Socket error:", error);
     });
 
     // Snapshot interpolation loop

@@ -68,6 +68,11 @@ DATABASES = {
 }
 
 # ---------- Auth ----------
+AUTHENTICATION_BACKENDS = [
+    'auth_app.backends.EmailBackend',
+    'django.contrib.auth.backends.ModelBackend',  # Fallback
+]
+
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},

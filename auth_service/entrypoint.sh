@@ -15,9 +15,6 @@ psycopg2.connect(
 done
 echo "✅ Database is ready!"
 
-echo "Creating auth_app migrations..."
-python manage.py makemigrations auth_app --noinput
-
 echo "🔄 Running migrations..."
 python manage.py migrate --noinput
 

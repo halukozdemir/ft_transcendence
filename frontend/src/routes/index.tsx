@@ -3,6 +3,8 @@ import GameLayout from "../layouts/Game";
 import DashboardPage from "../presentation/pages/Dashboard";
 import ProfilePage from "../presentation/pages/Profile";
 import AuthPage from "../presentation/pages/Auth";
+import LeaderboardPage from "../presentation/pages/Leaderboard";
+import ReplaysPage from "../presentation/pages/Replays";
 import ProtectedRoute from "../presentation/components/auth/ProtectedRoute";
 
 const router = createBrowserRouter([
@@ -31,6 +33,22 @@ const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         <GameLayout />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/leaderboard",
+    element: (
+      <ProtectedRoute>
+        <LeaderboardPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/replays",
+    element: (
+      <ProtectedRoute>
+        <ReplaysPage />
       </ProtectedRoute>
     ),
   },

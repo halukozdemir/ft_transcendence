@@ -2,6 +2,7 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
 const GameRoom = require("./game/GameRoom");
 
 const app = express();
@@ -12,6 +13,7 @@ const scoreLimit = Number(process.env.GAME_SCORE_LIMIT) || 5;
 const timeLimitSeconds = Number(process.env.GAME_TIME_LIMIT_SECONDS) || 180;
 const simulationFps = Number(process.env.GAME_SIMULATION_FPS) || 60;
 const broadcastFps = Number(process.env.GAME_BROADCAST_FPS) || 30;
+const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-key";
 
 // Health check
 app.get("/api/game/health/", (req, res) => {
@@ -30,6 +32,33 @@ app.get("/api/game/render-config/", (req, res) => {
   });
 });
 
+// Get leaderboard from game stats
+app.get("/api/game/leaderboard/", (req, res) => {
+  // TODO: Implement leaderboard from game stats DB
+  // This should pull data from auth_service stats
+  res.json([]);
+});
+
+// Get player stats
+app.get("/api/game/stats/:userId/", (req, res) => {
+  // TODO: Implement player stats endpoint
+  // Should fetch from auth_service PlayerStats model
+  res.json({
+    user_id: req.params.userId,
+    total_matches: 0,
+    wins: 0,
+    win_rate: 0,
+    elo_rating: 1200,
+  });
+});
+
+// Get match history
+app.get("/api/game/matches/", (req, res) => {
+  // TODO: Implement match history
+  // Should fetch from auth_service MatchRecord model
+  res.json([]);
+});
+
 const server = http.createServer(app);
 
 const io = new Server(server, {
@@ -41,20 +70,30 @@ const io = new Server(server, {
   pingTimeout: 5000,
 });
 
+// JWT Middleware - verify token from auth header or query
+io.use((socket, next) => {
+  const token = socket.handshake.auth?.token || socket.handshake.query?.token;
+  
+  if (!token) {
+    return next(new Error("No authentication token provided"));
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    socket.userId = decoded.sub || decoded.user_id;
+    socket.userEmail = decoded.email;
+    next();
+  } catch (err) {
+    next(new Error(`Authentication failed: ${err.message}`));
+  }
+});
+
 const room = new GameRoom({ scoreLimit, timeLimitSeconds });
 
 io.on("connection", (socket) => {
-  console.log("Connected:", socket.id);
+  console.log("Connected:", socket.id, "User:", socket.userId);
 
-  const handshakeClientId =
-    socket.handshake.auth?.clientId || socket.handshake.query?.clientId;
-  const clientId = room.normalizeClientId(handshakeClientId);
-
-  if (!clientId) {
-    socket.emit("invalid_client");
-    socket.disconnect();
-    return;
-  }
+  const clientId = socket.userId || socket.id;
 
   const existingSocketId = room.getSocketIdByClientId(clientId);
   if (existingSocketId && existingSocketId !== socket.id) {
@@ -79,6 +118,7 @@ io.on("connection", (socket) => {
 
   console.log("Player joined", {
     socketId: socket.id,
+    userId: socket.userId,
     team: room.players[socket.id].team,
     playerCount: room.playerCount,
     matchStatus: room.match.status,

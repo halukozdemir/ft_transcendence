@@ -38,6 +38,23 @@ export interface UserProfile {
 
 const API_BASE_URL = "/api/auth";
 
+async function handleResponse(res: Response) {
+  const data = await res.json();
+  if (!res.ok) {
+    // Extract error message from Django response
+    if (data.detail) throw new Error(data.detail);
+    if (data.error) throw new Error(data.error);
+    if (typeof data === 'object') {
+      const errors = Object.entries(data)
+        .map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
+        .join(', ');
+      if (errors) throw new Error(errors);
+    }
+    throw new Error(`${res.status}: ${res.statusText}`);
+  }
+  return data;
+}
+
 // Register
 export const authApi = {
   register: async (payload: RegisterPayload): Promise<AuthResponse> => {
@@ -46,8 +63,7 @@ export const authApi = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    if (!res.ok) throw new Error(`Register failed: ${res.statusText}`);
-    return res.json();
+    return handleResponse(res);
   },
 
   // Login
@@ -57,8 +73,7 @@ export const authApi = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    if (!res.ok) throw new Error(`Login failed: ${res.statusText}`);
-    return res.json();
+    return handleResponse(res);
   },
 
   // Logout
@@ -75,8 +90,7 @@ export const authApi = {
     const res = await fetch(`${API_BASE_URL}/profile/`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
-    if (!res.ok) throw new Error(`Get profile failed: ${res.statusText}`);
-    return res.json();
+    return handleResponse(res);
   },
 
   // Refresh Token
@@ -86,8 +100,7 @@ export const authApi = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refresh: refreshToken }),
     });
-    if (!res.ok) throw new Error(`Token refresh failed: ${res.statusText}`);
-    return res.json();
+    return handleResponse(res);
   },
 
   // OAuth 42 Redirect

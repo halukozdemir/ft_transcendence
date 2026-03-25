@@ -47,10 +47,18 @@ const DashboardPage = () => {
               >
                 Lobby
               </button>
-              <button className="text-sm font-medium text-slate-400 transition-colors hover:text-white" type="button">
+              <button
+                className="text-sm font-medium text-slate-400 transition-colors hover:text-white"
+                onClick={() => navigate("/replays")}
+                type="button"
+              >
                 Replays
               </button>
-              <button className="text-sm font-medium text-slate-400 transition-colors hover:text-white" type="button">
+              <button
+                className="text-sm font-medium text-slate-400 transition-colors hover:text-white"
+                onClick={() => navigate("/leaderboard")}
+                type="button"
+              >
                 Leaderboards
               </button>
             </nav>

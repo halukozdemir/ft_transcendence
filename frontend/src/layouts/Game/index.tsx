@@ -3,9 +3,11 @@ import GameScreen from "../../components/Game/Screen";
 import DebugPanel from "../../components/Game/DebugPanel";
 import { useGameSocket } from "../../hooks/useGameSocket";
 import { useGameInput } from "../../hooks/useGameInput";
+import { useAuth } from "../../infrastructure/auth/authContext";
 
 const GameLayout = () => {
-	const { state, myPlayerId, connected, socket, debug } = useGameSocket();
+	const { accessToken } = useAuth();
+	const { state, myPlayerId, connected, socket, debug } = useGameSocket(accessToken);
 	useGameInput(socket);
 
 	return (
