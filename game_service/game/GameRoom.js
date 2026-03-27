@@ -15,6 +15,7 @@ class GameRoom {
         this.ball = new Ball(this.width, this.height)
         this.score = { red: 0, blue: 0 }
         this.playerCount = 0
+        this.maxPlayersPerTeam = options.maxPlayersPerTeam || 1
 
         this.rules = {
             scoreLimit: options.scoreLimit || 5,
@@ -52,8 +53,21 @@ class GameRoom {
         return Object.values(this.players).some((player) => player.team === team)
     }
 
+    getTeamPlayerCount(team) {
+        return Object.values(this.players).filter((player) => player.team === team).length
+    }
+
+    isTeamFull(team) {
+        return this.getTeamPlayerCount(team) >= this.maxPlayersPerTeam
+    }
+
+    // Compute evenly-spaced Y positions for n players on a team
+    getTeamStartY(slotIndex, totalSlots) {
+        return (this.height / (totalSlots + 1)) * (slotIndex + 1)
+    }
+
     addPlayer(id, rawClientId) {
-        if (this.playerCount >= 2) return false
+        if (this.playerCount >= this.maxPlayersPerTeam * 2) return false
 
         const clientId = this.normalizeClientId(rawClientId)
         if (!clientId) return false
@@ -72,18 +86,26 @@ class GameRoom {
         const reservedTeam = this.clientTeam[clientId]
         let team = null
 
-        if (reservedTeam && !this.isTeamOccupied(reservedTeam)) {
+        if (reservedTeam && !this.isTeamFull(reservedTeam)) {
             team = reservedTeam
-        } else if (!this.isTeamOccupied("red")) {
-            team = "red"
-        } else if (!this.isTeamOccupied("blue")) {
-            team = "blue"
         } else {
-            return false
+            // Balanced assignment: prefer the team with fewer players
+            const redCount = this.getTeamPlayerCount("red")
+            const blueCount = this.getTeamPlayerCount("blue")
+            if (!this.isTeamFull("red") && redCount <= blueCount) {
+                team = "red"
+            } else if (!this.isTeamFull("blue")) {
+                team = "blue"
+            } else if (!this.isTeamFull("red")) {
+                team = "red"
+            } else {
+                return false
+            }
         }
 
+        const slotIndex = this.getTeamPlayerCount(team)
         const x = team === "red" ? 200 : this.width - 200
-        const y = this.height / 2
+        const y = this.getTeamStartY(slotIndex, this.maxPlayersPerTeam)
 
         const player = new Player(id, x, y, team)
         if (this._dbgPlayerSpeed !== undefined) player.speed = this._dbgPlayerSpeed
@@ -112,11 +134,14 @@ class GameRoom {
             this.playerCount--
 
             if (this.match.status === "in_progress" && !options.suppressMatchEnd) {
-                this.finishMatch({
-                    reason: "disconnect",
-                    winnerTeam: removedPlayer.team === "red" ? "blue" : "red",
-                    disconnectedTeam: removedPlayer.team,
-                })
+                // Only forfeit if the entire team is now gone
+                if (this.getTeamPlayerCount(removedPlayer.team) === 0) {
+                    this.finishMatch({
+                        reason: "disconnect",
+                        winnerTeam: removedPlayer.team === "red" ? "blue" : "red",
+                        disconnectedTeam: removedPlayer.team,
+                    })
+                }
             }
         }
 
@@ -265,20 +290,28 @@ class GameRoom {
 
         this.ball.reset()
 
-        Object.values(this.players).forEach((player) => {
-            if (player.team === "red") {
-                player.x = 200
-            } else {
-                player.x = this.width - 200
-            }
-            player.y = this.height / 2
+        const redPlayers = Object.values(this.players).filter((p) => p.team === "red")
+        const bluePlayers = Object.values(this.players).filter((p) => p.team === "blue")
+
+        redPlayers.forEach((player, i) => {
+            player.x = 200
+            player.y = this.getTeamStartY(i, this.maxPlayersPerTeam)
+            player.vx = 0
+            player.vy = 0
+        })
+
+        bluePlayers.forEach((player, i) => {
+            player.x = this.width - 200
+            player.y = this.getTeamStartY(i, this.maxPlayersPerTeam)
             player.vx = 0
             player.vy = 0
         })
     }
 
     startMatchIfReady() {
-        if (this.playerCount === 2 && this.match.status === "waiting") {
+        const redCount = this.getTeamPlayerCount("red")
+        const blueCount = this.getTeamPlayerCount("blue")
+        if (redCount >= 1 && blueCount >= 1 && this.match.status === "waiting") {
             this.match.status = "in_progress"
             this.match.startedAt = Date.now()
             this.match.endedAt = null
@@ -413,6 +446,7 @@ class GameRoom {
                 status: this.match.status,
                 timeRemainingSeconds: this.getTimeRemainingSeconds(),
             },
+            maxPlayersPerTeam: this.maxPlayersPerTeam,
             meta: {
                 serverTimeMs: Date.now(),
             },
@@ -423,6 +457,7 @@ class GameRoom {
         return {
             players: this.players,
             playerCount: this.playerCount,
+            maxPlayersPerTeam: this.maxPlayersPerTeam,
             ball: {
                 x: this.ball.x,
                 y: this.ball.y,

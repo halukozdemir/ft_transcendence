@@ -69,7 +69,7 @@ function interpolate(from: GameState, to: GameState, t: number): GameState {
   };
 }
 
-export function useGameSocket(accessToken?: string | null) {
+export function useGameSocket(accessToken?: string | null, maxPlayersPerTeam?: number) {
   const socketRef = useRef<Socket | null>(null);
   const [state, setState] = useState<GameState | null>(null);
   const [myPlayerId, setMyPlayerId] = useState<string | null>(null);
@@ -89,10 +89,13 @@ export function useGameSocket(accessToken?: string | null) {
       return;
     }
 
+    const mpt = maxPlayersPerTeam && maxPlayersPerTeam > 0 ? maxPlayersPerTeam : 1;
+
     const socket = io(window.location.origin, {
       path: "/ws/game/",
       transports: ["websocket"],
       auth: { token: accessToken },
+      query: { maxPlayersPerTeam: String(mpt) },
     });
     socketRef.current = socket;
 
@@ -200,7 +203,7 @@ export function useGameSocket(accessToken?: string | null) {
       cancelAnimationFrame(rafRef.current);
       socket.disconnect();
     };
-  }, [accessToken]);
+  }, [accessToken, maxPlayersPerTeam]);
 
   const debug = {
     getPacketRate: () => {

@@ -31,8 +31,11 @@ const DashboardPage = () => {
     ? (mockProfile.wins / mockProfile.losses).toFixed(2)
     : mockProfile.wins.toString();
 
-  const goToGame = (source?: string) => {
-    const query = source ? `?source=${encodeURIComponent(source)}` : "";
+  const goToGame = (source?: string, maxPlayers?: number) => {
+    const params = new URLSearchParams();
+    if (source) params.set("source", source);
+    if (maxPlayers && maxPlayers > 2) params.set("maxPlayers", String(maxPlayers));
+    const query = params.toString() ? `?${params.toString()}` : "";
     navigate(`/game${query}`);
   };
 
@@ -174,7 +177,7 @@ const DashboardPage = () => {
       <CreateRoomDialog
         open={createRoomOpen}
         onClose={() => setCreateRoomOpen(false)}
-        onCreate={(data) => { console.log("Oda oluşturuldu:", data); goToGame("create-room"); }}
+        onCreate={(data) => { console.log("Oda oluşturuldu:", data); goToGame("create-room", data.maxPlayers); }}
       />
     </div>
   );

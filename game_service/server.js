@@ -13,6 +13,7 @@ const scoreLimit = Number(process.env.GAME_SCORE_LIMIT) || 5;
 const timeLimitSeconds = Number(process.env.GAME_TIME_LIMIT_SECONDS) || 180;
 const simulationFps = Number(process.env.GAME_SIMULATION_FPS) || 60;
 const broadcastFps = Number(process.env.GAME_BROADCAST_FPS) || 30;
+const defaultMaxPlayersPerTeam = Number(process.env.GAME_MAX_PLAYERS_PER_TEAM) || 1;
 const JWT_SECRET = process.env.JWT_SECRET_KEY || process.env.JWT_SECRET || "dev-secret-key";
 
 // Health check
@@ -95,18 +96,24 @@ const rooms = new Map();        // roomId -> GameRoom
 const socketRoom = new Map();   // socket.id -> roomId
 let roomCounter = 0;
 
-function createRoom() {
+function createRoom(maxPlayersPerTeam) {
   const roomId = `room_${++roomCounter}`;
-  const room = new GameRoom({ scoreLimit, timeLimitSeconds });
+  const mpt = maxPlayersPerTeam || defaultMaxPlayersPerTeam;
+  const room = new GameRoom({ scoreLimit, timeLimitSeconds, maxPlayersPerTeam: mpt });
   room.id = roomId;
   rooms.set(roomId, room);
-  console.log(`Oda olusturuldu: ${roomId}`);
+  console.log(`Oda olusturuldu: ${roomId} (${mpt}v${mpt})`);
   return room;
 }
 
-function findWaitingRoom() {
+function findWaitingRoom(maxPlayersPerTeam) {
+  const mpt = maxPlayersPerTeam || defaultMaxPlayersPerTeam;
   for (const [, room] of rooms) {
-    if (room.match.status === "waiting" && room.playerCount < 2) {
+    if (
+      room.match.status === "waiting" &&
+      room.playerCount < room.maxPlayersPerTeam * 2 &&
+      room.maxPlayersPerTeam === mpt
+    ) {
       return room;
     }
   }
@@ -126,6 +133,12 @@ io.on("connection", (socket) => {
 
   const clientId = socket.userId || socket.id;
 
+  // Parse requested maxPlayersPerTeam from socket query (defaults to server default)
+  const requestedMpt = Math.max(1, Math.min(
+    Number(socket.handshake.query?.maxPlayersPerTeam) || defaultMaxPlayersPerTeam,
+    6 // cap at 6 per team
+  ));
+
   // Onceki baglantisi varsa temizle
   for (const [existingRoomId, room] of rooms) {
     const existingSocketId = room.getSocketIdByClientId(clientId);
@@ -142,9 +155,9 @@ io.on("connection", (socket) => {
   }
 
   // Quick match: bos oda bul veya yeni olustur
-  let room = findWaitingRoom();
+  let room = findWaitingRoom(requestedMpt);
   if (!room) {
-    room = createRoom();
+    room = createRoom(requestedMpt);
   }
 
   const added = room.addPlayer(socket.id, clientId);
@@ -162,6 +175,7 @@ io.on("connection", (socket) => {
   socket.emit("joined", {
     team: room.players[socket.id].team,
     roomId,
+    maxPlayersPerTeam: room.maxPlayersPerTeam,
   });
 
   console.log("Oyuncu katildi", {

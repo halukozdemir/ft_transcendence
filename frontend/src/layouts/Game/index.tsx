@@ -1,3 +1,4 @@
+import { useSearchParams } from "react-router";
 import Chat from "../../components/game/Chat";
 import GameScreen from "../../components/game/Screen";
 import DebugPanel from "../../components/game/DebugPanel";
@@ -7,7 +8,10 @@ import { useAuth } from "../../context/authContext";
 
 const GameLayout = () => {
 	const { accessToken } = useAuth();
-	const { state, myPlayerId, connected, socket, debug } = useGameSocket(accessToken);
+	const [searchParams] = useSearchParams();
+	const maxPlayers = Number(searchParams.get("maxPlayers")) || 2;
+	const maxPlayersPerTeam = Math.ceil(maxPlayers / 2);
+	const { state, myPlayerId, connected, socket, debug } = useGameSocket(accessToken, maxPlayersPerTeam);
 	useGameInput(socket);
 
 	return (
