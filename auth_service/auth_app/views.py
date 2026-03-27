@@ -2,7 +2,7 @@ from rest_framework import status, generics, permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.parsers import MultiPartParser
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate, get_user_model
 from django.db.models import Q, Count, F, Case, When, IntegerField
@@ -19,7 +19,7 @@ from .serializers import(
     FriendRequestSerializer,
     PasswordChangeSerializer,
 )
-from .models import PlayerStats, MatchRecord, Achievement, UserAchievement
+from .models import PlayerStats, MatchRecord, Achievement, UserAchievement, FriendRequest
 
 User = get_user_model()
 
@@ -261,8 +261,8 @@ class LeaderboardView(APIView):
 # ──────────────── Password Change ────────────────
 class PasswordChangeView(APIView):
     permission_classes = [permissions.IsAuthenticated]
-    
-    def put(self, request):
+
+    def _change_password(self, request):
         serializer = PasswordChangeSerializer(
             data=request.data,
             context={'request': request}
@@ -273,6 +273,12 @@ class PasswordChangeView(APIView):
         )
         request.user.save()
         return Response({'detail': 'Password updated.'})
+
+    def put(self, request):
+        return self._change_password(request)
+
+    def post(self, request):
+        return self._change_password(request)
     
 # ──────────────── Add/Remove Friend ────────────────
 class AddFriendView(APIView):
@@ -423,3 +429,184 @@ class OAuth42CallbackView(APIView):
             f"&refresh={str(refresh)}"
         )
         return redirect(frontend_url)
+
+# ──────────────── Profile Update (with avatar upload) ────────────────
+def _add_friends(user1, user2):
+    """Add bidirectional friendship atomically."""
+    user1.friends.add(user2)
+    user2.friends.add(user1)
+
+
+def _remove_friends(user1, user2):
+    """Remove bidirectional friendship."""
+    user1.friends.remove(user2)
+    user2.friends.remove(user1)
+
+
+class ProfileUpdateView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def patch(self, request):
+        user = request.user
+        avatar = request.data.get('avatar')
+
+        # Validate and update text fields through the ProfileSerializer
+        profile_data = {
+            k: request.data[k]
+            for k in ('username', 'bio')
+            if k in request.data
+        }
+        if profile_data:
+            profile_serializer = ProfileSerializer(user, data=profile_data, partial=True)
+            profile_serializer.is_valid(raise_exception=True)
+            profile_serializer.save()
+
+        # Handle avatar upload separately
+        if avatar:
+            avatar_serializer = AvatarSerializer(user, data={'avatar': avatar}, partial=True)
+            avatar_serializer.is_valid(raise_exception=True)
+            avatar_serializer.save()
+
+        user.refresh_from_db()
+        return Response(ProfileSerializer(user).data)
+
+# ──────────────── Delete Account ────────────────
+class DeleteAccountView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def delete(self, request):
+        password = request.data.get('password')
+        if not password:
+            return Response(
+                {'detail': 'Password is required to delete account.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if not request.user.check_password(password):
+            return Response(
+                {'detail': 'Incorrect password.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        request.user.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+# ──────────────── Friend Requests ────────────────
+class FriendRequestCreateView(APIView):
+    """Send a friend request (creates FriendRequest record)"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = FriendRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            receiver = User.objects.get(id=serializer.validated_data['user_id'])
+        except User.DoesNotExist:
+            return Response({'detail': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if receiver == request.user:
+            return Response({'detail': 'Cannot send request to yourself.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if request.user.friends.filter(id=receiver.id).exists():
+            return Response({'detail': 'Already friends.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        _, created = FriendRequest.objects.get_or_create(
+            sender=request.user, receiver=receiver
+        )
+        if not created:
+            return Response({'detail': 'Friend request already sent.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({'detail': f'Friend request sent to {receiver.username}.'})
+
+
+class FriendRequestsListView(APIView):
+    """List pending friend requests received by the current user"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        requests_qs = FriendRequest.objects.filter(
+            receiver=request.user, accepted=False
+        ).select_related('sender')
+        result = [
+            {
+                'id': fr.id,
+                'sender_id': fr.sender.id,
+                'sender_username': fr.sender.username,
+                'sender_avatar': fr.sender.avatar.url if fr.sender.avatar else None,
+                'created_at': fr.created_at.isoformat(),
+            }
+            for fr in requests_qs
+        ]
+        return Response(result)
+
+
+class AcceptFriendView(APIView):
+    """Accept a pending friend request"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = FriendRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        sender_id = serializer.validated_data['user_id']
+
+        try:
+            friend_request = FriendRequest.objects.get(
+                sender_id=sender_id,
+                receiver=request.user,
+                accepted=False
+            )
+        except FriendRequest.DoesNotExist:
+            return Response({'detail': 'Friend request not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        friend_request.accepted = True
+        friend_request.save()
+
+        _add_friends(request.user, friend_request.sender)
+
+        return Response({'detail': f'You are now friends with {friend_request.sender.username}.'})
+
+# ──────────────── Block / Unblock ────────────────
+class BlockUserView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = FriendRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            target = User.objects.get(id=serializer.validated_data['user_id'])
+        except User.DoesNotExist:
+            return Response({'detail': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if target == request.user:
+            return Response({'detail': 'Cannot block yourself.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        request.user.blocked_users.add(target)
+        # Remove from friends if they were friends
+        _remove_friends(request.user, target)
+
+        return Response({'detail': f'Blocked {target.username}.'})
+
+
+class UnblockUserView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = FriendRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            target = User.objects.get(id=serializer.validated_data['user_id'])
+        except User.DoesNotExist:
+            return Response({'detail': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        request.user.blocked_users.remove(target)
+        return Response({'detail': f'Unblocked {target.username}.'})
+
+
+class BlockedUsersListView(generics.ListAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = UserSerializer
+
+    def get_queryset(self):
+        return self.request.user.blocked_users.all()

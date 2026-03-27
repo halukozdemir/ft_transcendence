@@ -45,7 +45,7 @@ class ProfileSerializer(serializers.ModelSerializer):#bunu sor
     )
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'avatar', 'online_status', 'friends']
+        fields = ['id', 'username', 'email', 'avatar', 'online_status', 'bio', 'friends']
         read_only_fields = ['id', 'email']
 
 class FriendRequestSerializer(serializers.Serializer):
