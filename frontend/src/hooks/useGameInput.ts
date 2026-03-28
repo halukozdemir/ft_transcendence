@@ -9,11 +9,30 @@ interface InputState {
   right: boolean;
 }
 
-const MOVE_KEYS: Record<string, keyof InputState> = {
-  ArrowUp: "up",    w: "up",    W: "up",
-  ArrowDown: "down",  s: "down",  S: "down",
-  ArrowLeft: "left",  a: "left",  A: "left",
-  ArrowRight: "right", d: "right", D: "right",
+const MOVE_KEYS_BY_KEY: Record<string, keyof InputState> = {
+  ArrowUp: "up",
+  ArrowDown: "down",
+  ArrowLeft: "left",
+  ArrowRight: "right",
+  w: "up",
+  W: "up",
+  s: "down",
+  S: "down",
+  a: "left",
+  A: "left",
+  d: "right",
+  D: "right",
+};
+
+const MOVE_KEYS_BY_CODE: Record<string, keyof InputState> = {
+  ArrowUp: "up",
+  ArrowDown: "down",
+  ArrowLeft: "left",
+  ArrowRight: "right",
+  KeyW: "up",
+  KeyS: "down",
+  KeyA: "left",
+  KeyD: "right",
 };
 
 const KICK_KEYS = new Set(["x", "X"]);
@@ -33,6 +52,14 @@ export function useGameInput(socketRef: MutableRefObject<Socket | null>) {
   });
 
   useEffect(() => {
+    function resolveMoveAction(e: KeyboardEvent): keyof InputState | undefined {
+      return MOVE_KEYS_BY_CODE[e.code] || MOVE_KEYS_BY_KEY[e.key];
+    }
+
+    function emitInput() {
+      socketRef.current?.emit("input", { ...inputRef.current });
+    }
+
     function onDown(e: KeyboardEvent) {
       if (isEditableTarget(e.target)) return;
 
@@ -41,29 +68,44 @@ export function useGameInput(socketRef: MutableRefObject<Socket | null>) {
         socketRef.current?.emit("kick");
         return;
       }
-      const action = MOVE_KEYS[e.key];
+      const action = resolveMoveAction(e);
       if (!action) return;
       e.preventDefault();
+      if (inputRef.current[action]) return;
       inputRef.current[action] = true;
-      socketRef.current?.emit("input", { ...inputRef.current });
+      emitInput();
     }
 
     function onUp(e: KeyboardEvent) {
       if (isEditableTarget(e.target)) return;
 
-      const action = MOVE_KEYS[e.key];
+      const action = resolveMoveAction(e);
       if (!action) return;
       e.preventDefault();
+      if (!inputRef.current[action]) return;
       inputRef.current[action] = false;
-      socketRef.current?.emit("input", { ...inputRef.current });
+      emitInput();
+    }
+
+    function resetInput() {
+      inputRef.current = { up: false, down: false, left: false, right: false };
+      emitInput();
+    }
+
+    function onVisibilityChange() {
+      if (document.hidden) resetInput();
     }
 
     window.addEventListener("keydown", onDown);
     window.addEventListener("keyup", onUp);
+    window.addEventListener("blur", resetInput);
+    document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
       window.removeEventListener("keydown", onDown);
       window.removeEventListener("keyup", onUp);
+      window.removeEventListener("blur", resetInput);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [socketRef]);
 }

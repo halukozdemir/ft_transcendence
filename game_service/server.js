@@ -11,6 +11,9 @@ app.use(express.json());
 
 const scoreLimit = Number(process.env.GAME_SCORE_LIMIT) || 5;
 const timeLimitSeconds = Number(process.env.GAME_TIME_LIMIT_SECONDS) || 180;
+const teamSize = Math.max(1, Number(process.env.GAME_TEAM_SIZE) || 2);
+const minPlayersPerTeam = Math.max(1, Number(process.env.GAME_MIN_PLAYERS_PER_TEAM) || 1);
+const maxPlayersPerTeam = Math.max(minPlayersPerTeam, Number(process.env.GAME_MAX_PLAYERS_PER_TEAM) || teamSize);
 const simulationFps = Number(process.env.GAME_SIMULATION_FPS) || 60;
 const broadcastFps = Number(process.env.GAME_BROADCAST_FPS) || 30;
 const JWT_SECRET = process.env.JWT_SECRET_KEY || process.env.JWT_SECRET || "dev-secret-key";
@@ -21,7 +24,13 @@ app.get("/api/game/health/", (req, res) => {
 });
 
 app.get("/api/game/render-config/", (req, res) => {
-  const tempRoom = new GameRoom({ scoreLimit, timeLimitSeconds });
+  const tempRoom = new GameRoom({
+    scoreLimit,
+    timeLimitSeconds,
+    teamSize,
+    minPlayersPerTeam,
+    maxPlayersPerTeam,
+  });
   const state = tempRoom.getState();
   res.json({
     simulationFps,
@@ -97,16 +106,25 @@ let roomCounter = 0;
 
 function createRoom() {
   const roomId = `room_${++roomCounter}`;
-  const room = new GameRoom({ scoreLimit, timeLimitSeconds });
+  const room = new GameRoom({
+    scoreLimit,
+    timeLimitSeconds,
+    teamSize,
+    minPlayersPerTeam,
+    maxPlayersPerTeam,
+  });
   room.id = roomId;
   rooms.set(roomId, room);
   console.log(`Oda olusturuldu: ${roomId}`);
   return room;
 }
 
-function findWaitingRoom() {
+function findJoinableRoom() {
   for (const [, room] of rooms) {
-    if (room.match.status === "waiting" && room.playerCount < 2) {
+    if (
+      (room.match.status === "waiting" || room.match.status === "in_progress") &&
+      room.playerCount < room.getMatchCapacity()
+    ) {
       return room;
     }
   }
@@ -142,7 +160,7 @@ io.on("connection", (socket) => {
   }
 
   // Quick match: bos oda bul veya yeni olustur
-  let room = findWaitingRoom();
+  let room = findJoinableRoom();
   if (!room) {
     room = createRoom();
   }
