@@ -93,7 +93,7 @@ class GameRoom {
     }
 
     getReadyPlayerCount() {
-        return this.minPlayersPerTeam * 2
+        return 2
     }
 
     getHostClientId() {
@@ -153,12 +153,23 @@ class GameRoom {
         const blueCount = this.getTeamPlayerCount("blue")
 
         if (reservedTeam && this.hasTeamCapacity(reservedTeam)) {
-            team = reservedTeam
-        } else if (redCount < blueCount && this.hasTeamCapacity("red")) {
+            const otherTeam = reservedTeam === "red" ? "blue" : "red"
+            const reservedTeamCount = this.getTeamPlayerCount(reservedTeam)
+            const otherTeamCount = this.getTeamPlayerCount(otherTeam)
+
+            // Keep previous team only if it does not worsen balance.
+            if (reservedTeamCount <= otherTeamCount || !this.hasTeamCapacity(otherTeam)) {
+                team = reservedTeam
+            }
+        }
+
+        if (!team && redCount < blueCount && this.hasTeamCapacity("red")) {
             team = "red"
-        } else if (blueCount < redCount && this.hasTeamCapacity("blue")) {
+        } else if (!team && blueCount < redCount && this.hasTeamCapacity("blue")) {
             team = "blue"
-        } else {
+        }
+
+        if (!team) {
             const preferred = this.lastAutoAssignedTeam === "red" ? "blue" : "red"
             if (this.hasTeamCapacity(preferred)) {
                 team = preferred
@@ -219,7 +230,7 @@ class GameRoom {
 
             if (this.match.status === "in_progress" && !options.suppressMatchEnd) {
                 const disconnectedTeamCount = this.getTeamPlayerCount(removedPlayer.team)
-                if (disconnectedTeamCount < this.minPlayersPerTeam) {
+                if (disconnectedTeamCount < 1) {
                     this.finishMatch({
                         reason: "disconnect",
                         winnerTeam: removedPlayer.team === "red" ? "blue" : "red",
@@ -395,7 +406,7 @@ class GameRoom {
 
         const redCount = this.getTeamPlayerCount("red")
         const blueCount = this.getTeamPlayerCount("blue")
-        if (redCount >= this.minPlayersPerTeam && blueCount >= this.minPlayersPerTeam) {
+        if (redCount >= 1 && blueCount >= 1) {
             this.match.status = "in_progress"
             this.match.startedAt = Date.now()
             this.match.endedAt = null
