@@ -39,7 +39,17 @@ export interface UserProfile {
 const API_BASE_URL = "/api/auth";
 
 async function handleResponse(res: Response) {
-  const data = await res.json();
+  const contentType = res.headers.get("content-type") || "";
+  const isJson = contentType.includes("application/json");
+  const data = isJson ? await res.json() : await res.text();
+
+  if (!isJson) {
+    if (!res.ok) {
+      throw new Error(`${res.status}: ${res.statusText}`);
+    }
+    return data;
+  }
+
   if (!res.ok) {
     // Extract error message from Django response
     if (data.detail) throw new Error(data.detail);
@@ -105,16 +115,38 @@ export const authApi = {
 
   // Update Profile
   updateProfile: async (accessToken: string, payload: { username?: string; avatar?: File; banner?: File }): Promise<UserProfile> => {
-    const formData = new FormData();
-    if (payload.username) formData.append("username", payload.username);
-    if (payload.avatar)   formData.append("avatar", payload.avatar);
-    if (payload.banner)   formData.append("banner", payload.banner);
-    const res = await fetch(`${API_BASE_URL}/profile/update/`, {
-      method: "PATCH",
+    if (payload.banner) {
+      throw new Error("Kapak fotoğrafı yükleme henüz desteklenmiyor.");
+    }
+
+    if (payload.avatar) {
+      const avatarFormData = new FormData();
+      avatarFormData.append("avatar", payload.avatar);
+      const avatarRes = await fetch(`${API_BASE_URL}/profile/avatar/`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${accessToken}` },
+        body: avatarFormData,
+      });
+      await handleResponse(avatarRes);
+    }
+
+    if (payload.username) {
+      const profileRes = await fetch(`${API_BASE_URL}/profile/`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ username: payload.username }),
+      });
+      return handleResponse(profileRes);
+    }
+
+    // Refresh and return the latest profile after avatar-only updates
+    const profileRes = await fetch(`${API_BASE_URL}/profile/`, {
       headers: { Authorization: `Bearer ${accessToken}` },
-      body: formData,
     });
-    return handleResponse(res);
+    return handleResponse(profileRes);
   },
 
   // Change Password

@@ -3,7 +3,7 @@ import { useState } from "react";
 interface CreateRoomDialogProps {
   open: boolean;
   onClose: () => void;
-  onCreate: (data: CreateRoomData) => void;
+  onCreate: (data: CreateRoomData) => Promise<void> | void;
 }
 
 export interface CreateRoomData {
@@ -24,7 +24,7 @@ const CreateRoomDialog = ({ open, onClose, onCreate }: CreateRoomDialogProps) =>
 
   if (!open) return null;
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!title.trim()) {
       setError("Oda adı zorunludur.");
       return;
@@ -33,8 +33,13 @@ const CreateRoomDialog = ({ open, onClose, onCreate }: CreateRoomDialogProps) =>
       setError("Şifreli oda için şifre girmelisiniz.");
       return;
     }
-    onCreate({ title: title.trim(), maxPlayers, isLocked, password });
-    handleClose();
+    try {
+      setError("");
+      await onCreate({ title: title.trim(), maxPlayers, isLocked, password: password.trim() });
+      handleClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Oda oluşturulamadı.");
+    }
   };
 
   const handleClose = () => {

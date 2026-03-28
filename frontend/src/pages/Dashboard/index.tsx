@@ -132,19 +132,15 @@ const DashboardPage = () => {
   };
 
   const handleCreateRoom = async (data: CreateRoomData) => {
-    try {
-      const created = await gameApi.createRoom({
-        title: data.title,
-        maxPlayers: data.maxPlayers,
-        isLocked: data.isLocked,
-        password: data.password,
-      });
+    const created = await gameApi.createRoom({
+      title: data.title,
+      maxPlayers: data.maxPlayers,
+      isLocked: data.isLocked,
+      password: data.password,
+    });
 
-      setActiveRooms((prev: Room[]) => [normalizeRoom(created.room), ...prev.filter((r: Room) => r.id !== created.room.id)]);
-      goToRoom(created.room.id, data.isLocked ? data.password : undefined);
-    } catch {
-      goToGame("create-room");
-    }
+    setActiveRooms((prev: Room[]) => [normalizeRoom(created.room), ...prev.filter((r: Room) => r.id !== created.room.id)]);
+    goToRoom(created.room.id, data.isLocked ? data.password : undefined);
   };
 
   const displayFriends: Friend[] = (user?.friends || []).length > 0

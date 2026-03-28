@@ -150,7 +150,18 @@ export const gameApi = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    if (!res.ok) throw new Error(`Create room failed: ${res.statusText}`);
+    if (!res.ok) {
+      let message = `Create room failed: ${res.statusText}`;
+      try {
+        const data = await res.json();
+        if (typeof data?.error === "string" && data.error.trim()) {
+          message = data.error;
+        }
+      } catch {
+        // keep fallback message
+      }
+      throw new Error(message);
+    }
     return res.json();
   },
 
