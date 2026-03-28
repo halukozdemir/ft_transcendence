@@ -62,6 +62,7 @@ interface Snapshot {
 interface UseGameSocketOptions {
   roomId?: string;
   roomPassword?: string;
+  username?: string;
 }
 
 function lerp(a: number, b: number, t: number): number {
@@ -122,6 +123,7 @@ export function useGameSocket(accessToken?: string | null, options: UseGameSocke
         token: accessToken,
         roomId: options.roomId,
         roomPassword: options.roomPassword,
+        username: options.username,
       },
     });
     socketRef.current = socket;

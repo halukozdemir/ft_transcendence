@@ -102,7 +102,22 @@ io.use((socket, next) => {
 
 const rooms = new Map();        // roomId -> GameRoom
 const socketRoom = new Map();   // socket.id -> roomId
+const clientDisplayNames = new Map(); // clientId -> username
 let roomCounter = 0;
+
+function normalizeDisplayName(value) {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim();
+  if (!normalized) return null;
+  return normalized.slice(0, 40);
+}
+
+function isClientInAnyRoom(clientId) {
+  for (const [, room] of rooms) {
+    if (room.getSocketIdByClientId(clientId)) return true;
+  }
+  return false;
+}
 
 function getRoomHealth(room, lagMs) {
   if (room.playerCount === 0) return "offline";
@@ -114,7 +129,7 @@ function mapRoomForLobby(room) {
   const roomInfo = room.getRoomInfo();
   const lagMs = Math.max(0, Date.now() - (room.lastSimulationAt || Date.now()));
   const hostRaw = roomInfo.host;
-  const host = hostRaw ? `User#${hostRaw}` : "-";
+  const host = hostRaw ? (clientDisplayNames.get(String(hostRaw)) || `User#${hostRaw}`) : "-";
   const fallbackTitle = `Room ${String(roomInfo.id || "").replace("room_", "#")}`;
 
   return {
@@ -245,6 +260,10 @@ io.on("connection", (socket) => {
   console.log("Baglandi:", socket.id, "User:", socket.userId);
 
   const clientId = socket.userId || socket.id;
+  const requestedDisplayName = normalizeDisplayName(socket.handshake.auth?.username || socket.handshake.query?.username);
+  if (requestedDisplayName) {
+    clientDisplayNames.set(clientId, requestedDisplayName);
+  }
   const requestedRoomIdRaw = socket.handshake.auth?.roomId || socket.handshake.query?.roomId;
   const requestedRoomId = typeof requestedRoomIdRaw === "string" ? requestedRoomIdRaw.trim() : "";
   const roomPasswordRaw = socket.handshake.auth?.roomPassword || socket.handshake.query?.roomPassword;
@@ -363,6 +382,9 @@ io.on("connection", (socket) => {
         playerCount: r.playerCount,
       });
       cleanupRoom(rId);
+    }
+    if (!isClientInAnyRoom(clientId)) {
+      clientDisplayNames.delete(clientId);
     }
     socketRoom.delete(socket.id);
   });

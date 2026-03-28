@@ -9,7 +9,7 @@ import { useAuth } from "../../context/authContext";
 
 const GameLayout = () => {
 	const location = useLocation();
-	const { accessToken } = useAuth();
+	const { accessToken, user } = useAuth();
 
 	const roomId = useMemo(() => {
 		const params = new URLSearchParams(location.search);
@@ -24,6 +24,7 @@ const GameLayout = () => {
 	const { state, myPlayerId, connected, joinError, socket, debug } = useGameSocket(accessToken, {
 		roomId,
 		roomPassword,
+		username: user?.username,
 	});
 	useGameInput(socket);
 
@@ -39,7 +40,10 @@ const GameLayout = () => {
 					<GameScreen state={state} myPlayerId={myPlayerId} />
 				</div>
 				<div className="shrink-0 w-full lg:absolute lg:left-2 lg:bottom-2 lg:w-80">
-					<Chat/>
+					<Chat
+						roomName={roomId ? `game_${roomId}` : "game_lobby"}
+						username={user?.username || "Player"}
+					/>
 				</div>
 			</div>
 			<DebugPanel socketRef={socket} debug={debug} connected={connected} />
