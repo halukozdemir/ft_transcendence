@@ -37,6 +37,19 @@ function transformState(raw: any): GameState {
       blueTeamName: "Blue",
       round: 1,
       timeLeft: raw.match?.timeRemainingSeconds ?? 0,
+      status: raw.match?.status ?? "waiting",
+      endReason: raw.match?.endReason ?? null,
+      winnerTeam: raw.match?.winnerTeam ?? null,
+      loserTeam: raw.match?.loserTeam ?? null,
+      forfeitTeam: raw.match?.forfeitTeam ?? null,
+      disconnectedTeam: raw.match?.disconnectedTeam ?? null,
+      rematch: {
+        acceptedCount: Number(raw.match?.rematch?.acceptedCount ?? 0),
+        requiredCount: Number(raw.match?.rematch?.requiredCount ?? playerCount),
+        requestedPlayerIds: Array.isArray(raw.match?.rematch?.requestedPlayerIds)
+          ? raw.match.rematch.requestedPlayerIds.map(String)
+          : [],
+      },
     },
     room: {
       id: room.id ?? null,
@@ -275,5 +288,9 @@ export function useGameSocket(accessToken?: string | null, options: UseGameSocke
     getLastRaw: () => lastRawRef.current,
   };
 
-  return { state, myPlayerId, connected, joinError, socket: socketRef, debug };
+  const requestRematch = () => {
+    socketRef.current?.emit("rematch_request");
+  };
+
+  return { state, myPlayerId, connected, joinError, socket: socketRef, debug, requestRematch };
 }

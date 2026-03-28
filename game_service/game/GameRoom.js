@@ -35,6 +35,7 @@ class GameRoom {
             forfeitTeam: null,
             disconnectedTeam: null,
         }
+        this.rematchRequests = new Set()
 
         const requestedTitle = typeof options.title === "string" ? options.title.trim() : ""
         this.title = requestedTitle.length > 0 ? requestedTitle : "Quick Match"
@@ -136,15 +137,9 @@ class GameRoom {
         const clientId = this.normalizeClientId(rawClientId)
         if (!clientId) return false
 
-        if (this.match.status === "finished") {
-            this.match.status = "waiting"
-            this.match.startedAt = null
-            this.match.endedAt = null
-            this.match.endReason = null
-            this.match.winnerTeam = null
-            this.match.loserTeam = null
-            this.match.forfeitTeam = null
-            this.match.disconnectedTeam = null
+        if (this.match.status === "finished" && !this.clientTeam[clientId]) {
+            // Finished matches keep the same player cohort for rematch.
+            return false
         }
 
         const reservedTeam = this.clientTeam[clientId]
@@ -221,6 +216,7 @@ class GameRoom {
             delete this.socketToClient[id]
             if (clientId) {
                 delete this.clientToSocket[clientId]
+                this.rematchRequests.delete(clientId)
             }
             if (clientId && this.hostClientId === clientId) {
                 this.refreshHostClientId()
@@ -231,11 +227,7 @@ class GameRoom {
             if (this.match.status === "in_progress" && !options.suppressMatchEnd) {
                 const disconnectedTeamCount = this.getTeamPlayerCount(removedPlayer.team)
                 if (disconnectedTeamCount < 1) {
-                    this.finishMatch({
-                        reason: "disconnect",
-                        winnerTeam: removedPlayer.team === "red" ? "blue" : "red",
-                        disconnectedTeam: removedPlayer.team,
-                    })
+                    this.setWaitingForOpponent(removedPlayer.team)
                 }
             }
         }
@@ -260,6 +252,79 @@ class GameRoom {
         if (this.playerCount === 0) {
             this.clientTeam = {}
             this.hostClientId = null
+            this.rematchRequests.clear()
+        }
+    }
+
+    getRematchAcceptedCount() {
+        return Object.keys(this.players).reduce((count, socketId) => {
+            const clientId = this.socketToClient[socketId]
+            if (!clientId) return count
+            return count + (this.rematchRequests.has(clientId) ? 1 : 0)
+        }, 0)
+    }
+
+    getRematchRequestedPlayerIds() {
+        return Object.keys(this.players).filter((socketId) => {
+            const clientId = this.socketToClient[socketId]
+            return Boolean(clientId && this.rematchRequests.has(clientId))
+        })
+    }
+
+    getRematchSnapshot() {
+        return {
+            acceptedCount: this.getRematchAcceptedCount(),
+            requiredCount: this.playerCount,
+            requestedPlayerIds: this.getRematchRequestedPlayerIds(),
+        }
+    }
+
+    resetForRematch() {
+        this.match.status = "waiting"
+        this.match.startedAt = null
+        this.match.endedAt = null
+        this.match.endReason = null
+        this.match.winnerTeam = null
+        this.match.loserTeam = null
+        this.match.forfeitTeam = null
+        this.match.disconnectedTeam = null
+        this.score = { red: 0, blue: 0 }
+        this.ball.reset()
+        this.rematchRequests.clear()
+        this.resetAfterGoal()
+        this.startMatchIfReady()
+    }
+
+    requestRematch(id) {
+        if (this.match.status !== "finished") {
+            return { ok: false, reason: "match_not_finished" }
+        }
+
+        const player = this.players[id]
+        if (!player) {
+            return { ok: false, reason: "player_not_found" }
+        }
+
+        const clientId = this.socketToClient[id]
+        if (!clientId) {
+            return { ok: false, reason: "client_not_found" }
+        }
+
+        this.rematchRequests.add(clientId)
+
+        const acceptedCount = this.getRematchAcceptedCount()
+        const requiredCount = this.playerCount
+
+        if (requiredCount > 0 && acceptedCount >= requiredCount) {
+            this.resetForRematch()
+            return { ok: true, started: true }
+        }
+
+        return {
+            ok: true,
+            started: false,
+            acceptedCount,
+            requiredCount,
         }
     }
 
@@ -273,6 +338,28 @@ class GameRoom {
         if (!this.players[id] || this.match.status !== "in_progress") return
         const current = this.pendingKicks.get(id) || 0
         this.pendingKicks.set(id, Math.max(current, 3))
+    }
+
+    resetPlayersControlState() {
+        Object.values(this.players).forEach((player) => {
+            player.input = { up: false, down: false, left: false, right: false }
+            player.vx = 0
+            player.vy = 0
+        })
+        this.pendingKicks.clear()
+    }
+
+    setWaitingForOpponent(disconnectedTeam = null) {
+        this.match.status = "waiting"
+        this.match.startedAt = null
+        this.match.endedAt = null
+        this.match.endReason = "opponent_missing"
+        this.match.winnerTeam = null
+        this.match.loserTeam = null
+        this.match.forfeitTeam = null
+        this.match.disconnectedTeam = disconnectedTeam
+        this.resetPlayersControlState()
+        this.ball.reset()
     }
 
     forfeit(id) {
@@ -415,6 +502,8 @@ class GameRoom {
             this.match.loserTeam = null
             this.match.forfeitTeam = null
             this.match.disconnectedTeam = null
+            this.rematchRequests.clear()
+            this.resetPlayersControlState()
             this.score = { red: 0, blue: 0 }
             this.ball.reset()
             this.resetAfterGoal()
@@ -452,6 +541,7 @@ class GameRoom {
         this.match.loserTeam = loserTeam
         this.match.forfeitTeam = forfeitTeam
         this.match.disconnectedTeam = disconnectedTeam
+        this.resetPlayersControlState()
     }
 
     getTimeRemainingSeconds() {
@@ -564,7 +654,13 @@ class GameRoom {
             score: this.score,
             match: {
                 status: this.match.status,
+                endReason: this.match.endReason,
+                winnerTeam: this.match.winnerTeam,
+                loserTeam: this.match.loserTeam,
+                forfeitTeam: this.match.forfeitTeam,
+                disconnectedTeam: this.match.disconnectedTeam,
                 timeRemainingSeconds: this.getTimeRemainingSeconds(),
+                rematch: this.getRematchSnapshot(),
             },
             room: this.getRoomInfo(),
             meta: {
@@ -593,6 +689,7 @@ class GameRoom {
                 forfeitTeam: this.match.forfeitTeam,
                 disconnectedTeam: this.match.disconnectedTeam,
                 timeRemainingSeconds: this.getTimeRemainingSeconds(),
+                rematch: this.getRematchSnapshot(),
             },
             render: this.getRenderSnapshot(),
             overlay: {

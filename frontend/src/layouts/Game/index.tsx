@@ -21,7 +21,7 @@ const GameLayout = () => {
 		return sessionStorage.getItem(`game-room-password:${roomId}`) || undefined;
 	}, [roomId]);
 
-	const { state, myPlayerId, connected, joinError, socket, debug } = useGameSocket(accessToken, {
+	const { state, myPlayerId, connected, joinError, socket, debug, requestRematch } = useGameSocket(accessToken, {
 		roomId,
 		roomPassword,
 		username: user?.username,
@@ -37,7 +37,12 @@ const GameLayout = () => {
 					</div>
 				)}
 				<div className="flex-1 min-h-0 lg:absolute lg:inset-2 rounded-xl overflow-hidden">
-					<GameScreen state={state} myPlayerId={myPlayerId} />
+					<GameScreen
+						state={state}
+						myPlayerId={myPlayerId}
+						connected={connected}
+						onRematch={requestRematch}
+					/>
 				</div>
 				<div className="shrink-0 w-full lg:absolute lg:left-2 lg:bottom-2 lg:w-80">
 					<Chat

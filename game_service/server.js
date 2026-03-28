@@ -347,6 +347,15 @@ io.on("connection", (socket) => {
     if (r) r.forfeit(socket.id);
   });
 
+  socket.on("rematch_request", () => {
+    const roomIdForSocket = socketRoom.get(socket.id);
+    const r = rooms.get(roomIdForSocket);
+    if (!r) return;
+
+    r.requestRematch(socket.id);
+    io.to(roomIdForSocket).emit("state", r.getState());
+  });
+
   socket.on("debug:config", (config) => {
     const r = rooms.get(socketRoom.get(socket.id));
     if (!r) return;
@@ -381,6 +390,12 @@ io.on("connection", (socket) => {
         roomId: rId,
         playerCount: r.playerCount,
       });
+
+      // Push immediate state after a leave event so clients can show waiting UI instantly.
+      if (r.playerCount > 0) {
+        io.to(rId).emit("state", r.getState());
+      }
+
       cleanupRoom(rId);
     }
     if (!isClientInAnyRoom(clientId)) {

@@ -23,6 +23,17 @@ export interface MatchState {
   blueTeamName: string;
   round:        number;
   timeLeft:     number; // seconds
+  status: "waiting" | "in_progress" | "finished";
+  endReason: string | null;
+  winnerTeam: TeamColor | null;
+  loserTeam: TeamColor | null;
+  forfeitTeam: TeamColor | null;
+  disconnectedTeam: TeamColor | null;
+  rematch: {
+    acceptedCount: number;
+    requiredCount: number;
+    requestedPlayerIds: string[];
+  };
 }
 
 export interface RoomState {
