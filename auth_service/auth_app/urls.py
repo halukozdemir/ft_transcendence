@@ -18,6 +18,7 @@ from .views import(
     FriendListView,
     OAuth42RedirectView,
     OAuth42CallbackView,
+    MatchResultView,
 )
 
 def health(request):
@@ -42,4 +43,5 @@ urlpatterns = [
     path('leaderboard/', LeaderboardView.as_view(), name='leaderboard'),
     path('oauth/42/', OAuth42RedirectView.as_view(), name='oauth-42'),
     path('oauth/callback/', OAuth42CallbackView.as_view(), name='oauth-callback'),
+    path('match-result/', MatchResultView.as_view(), name='match-results'),
 ]
