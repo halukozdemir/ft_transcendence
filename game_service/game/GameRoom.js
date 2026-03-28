@@ -36,6 +36,12 @@ class GameRoom {
             disconnectedTeam: null,
         }
 
+        const requestedTitle = typeof options.title === "string" ? options.title.trim() : ""
+        this.title = requestedTitle.length > 0 ? requestedTitle : "Quick Match"
+        this.isLocked = Boolean(options.isLocked)
+        this.password = this.isLocked && typeof options.password === "string" ? options.password : ""
+        this.createdAt = Date.now()
+        this.hostClientId = null
         this.simulationTick = 0
         this.lastSimulationAt = Date.now()
     }
@@ -88,6 +94,40 @@ class GameRoom {
 
     getReadyPlayerCount() {
         return this.minPlayersPerTeam * 2
+    }
+
+    getHostClientId() {
+        return this.hostClientId
+    }
+
+    getTitle() {
+        return this.title
+    }
+
+    setTitle(rawTitle) {
+        if (typeof rawTitle !== "string") return
+        const normalized = rawTitle.trim()
+        if (normalized.length === 0) return
+        this.title = normalized.slice(0, 80)
+    }
+
+    requiresPassword() {
+        return this.isLocked && this.password.length > 0
+    }
+
+    validatePassword(rawPassword) {
+        if (!this.requiresPassword()) return true
+        if (typeof rawPassword !== "string") return false
+        return rawPassword === this.password
+    }
+
+    refreshHostClientId() {
+        const firstSocketId = Object.keys(this.players).sort()[0]
+        if (!firstSocketId) {
+            this.hostClientId = null
+            return
+        }
+        this.hostClientId = this.socketToClient[firstSocketId] || null
     }
 
     addPlayer(id, rawClientId) {
@@ -154,6 +194,9 @@ class GameRoom {
         this.socketToClient[id] = clientId
         this.clientToSocket[clientId] = id
         this.clientTeam[clientId] = team
+        if (!this.hostClientId) {
+            this.hostClientId = clientId
+        }
         this.playerCount++
         this.startMatchIfReady()
         return true
@@ -167,6 +210,9 @@ class GameRoom {
             delete this.socketToClient[id]
             if (clientId) {
                 delete this.clientToSocket[clientId]
+            }
+            if (clientId && this.hostClientId === clientId) {
+                this.refreshHostClientId()
             }
             this.pendingKicks.delete(id)
             this.playerCount--
@@ -202,6 +248,7 @@ class GameRoom {
 
         if (this.playerCount === 0) {
             this.clientTeam = {}
+            this.hostClientId = null
         }
     }
 
@@ -467,6 +514,30 @@ class GameRoom {
         }
     }
 
+    getRoomInfo() {
+        const redCount = this.getTeamPlayerCount("red")
+        const blueCount = this.getTeamPlayerCount("blue")
+        const maxPlayers = this.getMatchCapacity()
+        const hostClientId = this.getHostClientId()
+        return {
+            id: this.id || null,
+            title: this.getTitle(),
+            createdAt: this.createdAt,
+            host: hostClientId,
+            isLocked: this.requiresPassword(),
+            playerCount: this.playerCount,
+            maxPlayers,
+            availableSlots: Math.max(0, maxPlayers - this.playerCount),
+            isFull: this.playerCount >= maxPlayers,
+            teams: {
+                red: redCount,
+                blue: blueCount,
+            },
+            minPlayersPerTeam: this.minPlayersPerTeam,
+            maxPlayersPerTeam: this.maxPlayersPerTeam,
+        }
+    }
+
     getBroadcastState() {
         return {
             players: Object.values(this.players).map((p) => ({
@@ -484,6 +555,7 @@ class GameRoom {
                 status: this.match.status,
                 timeRemainingSeconds: this.getTimeRemainingSeconds(),
             },
+            room: this.getRoomInfo(),
             meta: {
                 serverTimeMs: Date.now(),
             },
@@ -501,11 +573,7 @@ class GameRoom {
             },
             score: this.score,
             rules: this.rules,
-            room: {
-                minPlayersPerTeam: this.minPlayersPerTeam,
-                maxPlayersPerTeam: this.maxPlayersPerTeam,
-                maxPlayers: this.getMatchCapacity(),
-            },
+            room: this.getRoomInfo(),
             match: {
                 status: this.match.status,
                 endReason: this.match.endReason,

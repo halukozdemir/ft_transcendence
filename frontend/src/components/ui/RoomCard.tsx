@@ -37,6 +37,11 @@ const RoomCard = ({ room, onJoin }: RoomCardProps) => {
               {room.title}
             </h4>
             {room.isLocked ? <AppIcon className="text-slate-600" name="lock" size={16} /> : null}
+            {room.isLocked ? (
+              <span className="rounded-md border border-amber-400/40 bg-amber-400/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-300">
+                Şifreli Oda
+              </span>
+            ) : null}
           </div>
           <p className="text-xs text-slate-500">
             Kurucu: <span className="text-slate-300">{room.host}</span>
@@ -81,7 +86,7 @@ const RoomCard = ({ room, onJoin }: RoomCardProps) => {
           onClick={() => onJoin?.(room.id)}
           type="button"
         >
-          {isFull ? "DOLU" : "KATIL"}
+          {isFull ? "DOLU" : room.isLocked ? "ŞİFRE İLE KATIL" : "KATIL"}
         </button>
       </div>
     </article>

@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import ActionButton from "../../components/ui/ActionButton";
 import AppIcon from "../../components/ui/AppIcon";
-import CreateRoomDialog from "../../components/ui/CreateRoomDialog";
+import CreateRoomDialog, { type CreateRoomData } from "../../components/ui/CreateRoomDialog";
 import FriendRow from "../../components/ui/FriendRow";
 import RoomCard from "../../components/ui/RoomCard";
 import StatCard from "../../components/ui/StatCard";
 import { useAuth } from "../../context/authContext";
+import { gameApi } from "../../services/gameApi";
+import type { Friend, Room } from "../../types/lobby";
 import { rooms, friends as mockFriends, profile as mockProfile } from "./mockLobbyData";
 import "./dashboard.css";
 
@@ -14,9 +16,139 @@ const DashboardPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [createRoomOpen, setCreateRoomOpen] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const [activeRooms, setActiveRooms] = useState<Room[]>(rooms);
+  const [roomsLoading, setRoomsLoading] = useState(true);
 
-  const displayFriends = (user?.friends || []).length > 0
-    ? (user?.friends || []).map((f) => ({
+  useEffect(() => {
+    let isCancelled = false;
+
+    const normalizeRooms = (items: Awaited<ReturnType<typeof gameApi.getActiveRooms>>["rooms"]): Room[] =>
+      items.map((room) => ({
+        id: room.id,
+        title: room.title,
+        host: room.host,
+        map: `${room.maxPlayersPerTeam}v${room.maxPlayersPerTeam}`,
+        currentPlayers: room.currentPlayers,
+        maxPlayers: room.maxPlayers,
+        pingMs: room.pingMs,
+        isLocked: room.isLocked,
+        isVerified: room.matchStatus === "in_progress",
+        health: room.health,
+      }));
+
+    const fetchRooms = async () => {
+      try {
+        const response = await gameApi.getActiveRooms();
+        if (!isCancelled) {
+          setActiveRooms(normalizeRooms(response.rooms));
+        }
+      } catch {
+        if (!isCancelled) {
+          setActiveRooms(rooms);
+        }
+      } finally {
+        if (!isCancelled) {
+          setRoomsLoading(false);
+        }
+      }
+    };
+
+    fetchRooms();
+    const poll = setInterval(fetchRooms, 3000);
+
+    return () => {
+      isCancelled = true;
+      clearInterval(poll);
+    };
+  }, []);
+
+  const filteredRooms = useMemo(() => {
+    const q = searchText.trim().toLowerCase();
+    if (!q) return activeRooms;
+    return activeRooms.filter((room: Room) =>
+      room.title.toLowerCase().includes(q) ||
+      room.host.toLowerCase().includes(q)
+    );
+  }, [activeRooms, searchText]);
+
+  const normalizeRoom = (room: Awaited<ReturnType<typeof gameApi.getActiveRooms>>["rooms"][number]): Room => ({
+    id: room.id,
+    title: room.title,
+    host: room.host,
+    map: `${room.maxPlayersPerTeam}v${room.maxPlayersPerTeam}`,
+    currentPlayers: room.currentPlayers,
+    maxPlayers: room.maxPlayers,
+    pingMs: room.pingMs,
+    isLocked: room.isLocked,
+    isVerified: room.matchStatus === "in_progress",
+    health: room.health,
+  });
+
+  const roomPasswordKey = (roomId: string) => `game-room-password:${roomId}`;
+
+  const goToRoom = (roomId: string, roomPassword?: string) => {
+    const params = new URLSearchParams();
+    params.set("roomId", roomId);
+
+    const key = roomPasswordKey(roomId);
+    if (roomPassword && roomPassword.trim().length > 0) {
+      sessionStorage.setItem(key, roomPassword.trim());
+    } else {
+      sessionStorage.removeItem(key);
+    }
+
+    navigate(`/game?${params.toString()}`);
+  };
+
+  const handleJoinRoom = async (roomId: string) => {
+    const room = activeRooms.find((r: Room) => r.id === roomId);
+    if (!room) {
+      goToRoom(roomId);
+      return;
+    }
+
+    if (room.isLocked) {
+      const enteredPassword = window.prompt("Bu oda şifreli. Lütfen şifreyi girin:");
+      if (enteredPassword === null) return;
+      if (!enteredPassword.trim()) return;
+
+      try {
+        const result = await gameApi.validateRoomPassword(roomId, enteredPassword.trim());
+        if (!result.valid) {
+          window.alert("Şifre hatalı.");
+          return;
+        }
+      } catch {
+        window.alert("Şifre doğrulanamadı. Lütfen tekrar deneyin.");
+        return;
+      }
+
+      goToRoom(roomId, enteredPassword.trim());
+      return;
+    }
+
+    goToRoom(roomId);
+  };
+
+  const handleCreateRoom = async (data: CreateRoomData) => {
+    try {
+      const created = await gameApi.createRoom({
+        title: data.title,
+        maxPlayers: data.maxPlayers,
+        isLocked: data.isLocked,
+        password: data.password,
+      });
+
+      setActiveRooms((prev: Room[]) => [normalizeRoom(created.room), ...prev.filter((r: Room) => r.id !== created.room.id)]);
+      goToRoom(created.room.id, data.isLocked ? data.password : undefined);
+    } catch {
+      goToGame("create-room");
+    }
+  };
+
+  const displayFriends: Friend[] = (user?.friends || []).length > 0
+    ? (user?.friends || []).map((f: any) => ({
         id: String(f.id),
         nickname: f.username,
         status: f.online_status ? "available" as const : "offline" as const,
@@ -38,7 +170,7 @@ const DashboardPage = () => {
 
   const friendList = (
     <>
-      {displayFriends.map((friend) => (
+      {displayFriends.map((friend: Friend) => (
         <FriendRow
           friend={friend}
           key={friend.id}
@@ -120,14 +252,24 @@ const DashboardPage = () => {
                 className="w-full rounded-xl border-2 border-(--dashboard-border) bg-(--dashboard-card) py-3 pr-4 pl-12 text-white placeholder:text-slate-600 focus:border-(--dashboard-primary) focus:ring-0"
                 placeholder="Oda adı veya sunucu ara..."
                 type="text"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
               />
             </label>
           </div>
 
           <div className="dashboard-scrollbar flex-1 space-y-3 overflow-y-auto pb-6">
-            {rooms.map((room) => (
-              <RoomCard key={room.id} room={room} onJoin={goToGame} />
+            {roomsLoading && activeRooms.length === 0 && (
+              <p className="text-sm text-slate-500">Odalar yükleniyor...</p>
+            )}
+
+            {filteredRooms.map((room) => (
+              <RoomCard key={room.id} room={room} onJoin={handleJoinRoom} />
             ))}
+
+            {!roomsLoading && filteredRooms.length === 0 && (
+              <p className="text-sm text-slate-500">Aktif oda bulunamadı.</p>
+            )}
 
             {/* Mobile: friends inline below rooms */}
             <div className="xl:hidden pt-2">
@@ -174,7 +316,7 @@ const DashboardPage = () => {
       <CreateRoomDialog
         open={createRoomOpen}
         onClose={() => setCreateRoomOpen(false)}
-        onCreate={(data) => { console.log("Oda oluşturuldu:", data); goToGame("create-room"); }}
+        onCreate={handleCreateRoom}
       />
     </div>
   );

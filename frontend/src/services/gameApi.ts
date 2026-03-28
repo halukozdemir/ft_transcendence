@@ -50,6 +50,50 @@ export interface LeaderboardEntry {
   wins: number;
 }
 
+export interface ActiveRoomEntry {
+  id: string;
+  title: string;
+  host: string;
+  currentPlayers: number;
+  maxPlayers: number;
+  isLocked: boolean;
+  isFull: boolean;
+  availableSlots: number;
+  pingMs: number;
+  health: "healthy" | "warning" | "offline";
+  matchStatus: "waiting" | "in_progress" | "finished";
+  teams: {
+    red: number;
+    blue: number;
+  };
+  minPlayersPerTeam: number;
+  maxPlayersPerTeam: number;
+  createdAt: number;
+}
+
+export interface ActiveRoomsResponse {
+  rooms: ActiveRoomEntry[];
+  totalRooms: number;
+  totalPlayers: number;
+  serverTimeMs: number;
+}
+
+export interface CreateActiveRoomPayload {
+  title: string;
+  maxPlayers: number;
+  isLocked?: boolean;
+  password?: string;
+}
+
+export interface CreateActiveRoomResponse {
+  room: ActiveRoomEntry;
+}
+
+export interface ValidateRoomPasswordResponse {
+  valid: boolean;
+  requiresPassword: boolean;
+}
+
 const API_BASE_URL = "/api/game";
 const AUTH_API_BASE = "/api/auth";
 
@@ -90,6 +134,33 @@ export const gameApi = {
   health: async (): Promise<{ status: string; service: string }> => {
     const res = await fetch(`${API_BASE_URL}/health/`);
     if (!res.ok) throw new Error("Health check failed");
+    return res.json();
+  },
+
+  // Get active rooms (live)
+  getActiveRooms: async (): Promise<ActiveRoomsResponse> => {
+    const res = await fetch(`${API_BASE_URL}/rooms/`);
+    if (!res.ok) throw new Error(`Get rooms failed: ${res.statusText}`);
+    return res.json();
+  },
+
+  createRoom: async (payload: CreateActiveRoomPayload): Promise<CreateActiveRoomResponse> => {
+    const res = await fetch(`${API_BASE_URL}/rooms/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error(`Create room failed: ${res.statusText}`);
+    return res.json();
+  },
+
+  validateRoomPassword: async (roomId: string, password: string): Promise<ValidateRoomPasswordResponse> => {
+    const res = await fetch(`${API_BASE_URL}/rooms/${encodeURIComponent(roomId)}/validate-password/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    });
+    if (!res.ok) throw new Error(`Validate room password failed: ${res.statusText}`);
     return res.json();
   },
 };

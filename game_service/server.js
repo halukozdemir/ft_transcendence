@@ -104,14 +104,108 @@ const rooms = new Map();        // roomId -> GameRoom
 const socketRoom = new Map();   // socket.id -> roomId
 let roomCounter = 0;
 
-function createRoom() {
+function getRoomHealth(room, lagMs) {
+  if (room.playerCount === 0) return "offline";
+  if (lagMs > 80) return "warning";
+  return "healthy";
+}
+
+function mapRoomForLobby(room) {
+  const roomInfo = room.getRoomInfo();
+  const lagMs = Math.max(0, Date.now() - (room.lastSimulationAt || Date.now()));
+  const hostRaw = roomInfo.host;
+  const host = hostRaw ? `User#${hostRaw}` : "-";
+  const fallbackTitle = `Room ${String(roomInfo.id || "").replace("room_", "#")}`;
+
+  return {
+    id: roomInfo.id,
+    title: roomInfo.title || fallbackTitle,
+    host,
+    currentPlayers: roomInfo.playerCount,
+    maxPlayers: roomInfo.maxPlayers,
+    isLocked: roomInfo.isLocked,
+    isFull: roomInfo.isFull,
+    availableSlots: roomInfo.availableSlots,
+    pingMs: lagMs,
+    health: getRoomHealth(room, lagMs),
+    matchStatus: room.match.status,
+    teams: roomInfo.teams,
+    minPlayersPerTeam: roomInfo.minPlayersPerTeam,
+    maxPlayersPerTeam: roomInfo.maxPlayersPerTeam,
+    createdAt: roomInfo.createdAt,
+  };
+}
+
+app.get("/api/game/rooms/", (req, res) => {
+  const roomList = Array.from(rooms.values())
+    .map((room) => mapRoomForLobby(room))
+    .sort((a, b) => {
+      if (b.currentPlayers !== a.currentPlayers) return b.currentPlayers - a.currentPlayers;
+      return (a.createdAt || 0) - (b.createdAt || 0);
+    });
+
+  res.json({
+    rooms: roomList,
+    totalRooms: roomList.length,
+    totalPlayers: roomList.reduce((sum, room) => sum + room.currentPlayers, 0),
+    serverTimeMs: Date.now(),
+  });
+});
+
+app.post("/api/game/rooms/", (req, res) => {
+  const body = req.body || {};
+  const title = typeof body.title === "string" ? body.title.trim() : "";
+  const isLocked = Boolean(body.isLocked);
+  const password = typeof body.password === "string" ? body.password : "";
+  const requestedMaxPlayers = Number(body.maxPlayers);
+  const safeMaxPlayers = Number.isFinite(requestedMaxPlayers) ? Math.max(2, Math.min(12, requestedMaxPlayers)) : null;
+  const requestedPerTeam = safeMaxPlayers ? Math.max(1, Math.floor(safeMaxPlayers / 2)) : maxPlayersPerTeam;
+
+  if (isLocked && password.trim().length === 0) {
+    return res.status(400).json({ error: "Password is required for locked rooms." });
+  }
+
+  const room = createRoom({
+    title: title || "Custom Room",
+    isLocked,
+    password,
+    maxPlayersPerTeam: requestedPerTeam,
+    minPlayersPerTeam: Math.min(minPlayersPerTeam, requestedPerTeam),
+  });
+
+  res.status(201).json({
+    room: mapRoomForLobby(room),
+  });
+});
+
+app.post("/api/game/rooms/:roomId/validate-password/", (req, res) => {
+  const roomId = String(req.params.roomId || "").trim();
+  const room = rooms.get(roomId);
+
+  if (!room) {
+    return res.status(404).json({ valid: false, error: "Room not found" });
+  }
+
+  if (!room.requiresPassword()) {
+    return res.json({ valid: true, requiresPassword: false });
+  }
+
+  const password = typeof req.body?.password === "string" ? req.body.password : "";
+  const valid = room.validatePassword(password);
+  return res.json({ valid, requiresPassword: true });
+});
+
+function createRoom(options = {}) {
   const roomId = `room_${++roomCounter}`;
   const room = new GameRoom({
     scoreLimit,
     timeLimitSeconds,
-    teamSize,
-    minPlayersPerTeam,
-    maxPlayersPerTeam,
+    teamSize: options.teamSize || teamSize,
+    minPlayersPerTeam: options.minPlayersPerTeam || minPlayersPerTeam,
+    maxPlayersPerTeam: options.maxPlayersPerTeam || maxPlayersPerTeam,
+    title: options.title,
+    isLocked: Boolean(options.isLocked),
+    password: typeof options.password === "string" ? options.password : "",
   });
   room.id = roomId;
   rooms.set(roomId, room);
@@ -123,6 +217,7 @@ function findJoinableRoom() {
   for (const [, room] of rooms) {
     if (
       (room.match.status === "waiting" || room.match.status === "in_progress") &&
+      !room.requiresPassword() &&
       room.playerCount < room.getMatchCapacity()
     ) {
       return room;
@@ -139,10 +234,21 @@ function cleanupRoom(roomId) {
   }
 }
 
+function emitJoinErrorAndDisconnect(socket, eventName, payload = {}) {
+  socket.emit(eventName, payload);
+  setTimeout(() => {
+    socket.disconnect(true);
+  }, 75);
+}
+
 io.on("connection", (socket) => {
   console.log("Baglandi:", socket.id, "User:", socket.userId);
 
   const clientId = socket.userId || socket.id;
+  const requestedRoomIdRaw = socket.handshake.auth?.roomId || socket.handshake.query?.roomId;
+  const requestedRoomId = typeof requestedRoomIdRaw === "string" ? requestedRoomIdRaw.trim() : "";
+  const roomPasswordRaw = socket.handshake.auth?.roomPassword || socket.handshake.query?.roomPassword;
+  const roomPassword = typeof roomPasswordRaw === "string" ? roomPasswordRaw : "";
 
   // Onceki baglantisi varsa temizle
   for (const [existingRoomId, room] of rooms) {
@@ -159,17 +265,30 @@ io.on("connection", (socket) => {
     }
   }
 
-  // Quick match: bos oda bul veya yeni olustur
-  let room = findJoinableRoom();
-  if (!room) {
-    room = createRoom();
+  let room;
+  if (requestedRoomId) {
+    room = rooms.get(requestedRoomId);
+    if (!room) {
+      emitJoinErrorAndDisconnect(socket, "room_not_found", { roomId: requestedRoomId });
+      return;
+    }
+
+    if (room.requiresPassword() && !room.validatePassword(roomPassword)) {
+      emitJoinErrorAndDisconnect(socket, "room_invalid_password", { roomId: requestedRoomId });
+      return;
+    }
+  } else {
+    // Quick match: bos oda bul veya yeni olustur
+    room = findJoinableRoom();
+    if (!room) {
+      room = createRoom();
+    }
   }
 
   const added = room.addPlayer(socket.id, clientId);
   if (!added) {
     console.log("Oda dolu, reddedildi:", socket.id);
-    socket.emit("room_full");
-    socket.disconnect();
+    emitJoinErrorAndDisconnect(socket, "room_full");
     return;
   }
 
@@ -180,6 +299,7 @@ io.on("connection", (socket) => {
   socket.emit("joined", {
     team: room.players[socket.id].team,
     roomId,
+    room: room.getRoomInfo(),
   });
 
   console.log("Oyuncu katildi", {

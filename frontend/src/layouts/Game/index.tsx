@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+import { useLocation } from "react-router";
 import Chat from "../../components/game/Chat";
 import GameScreen from "../../components/game/Screen";
 import DebugPanel from "../../components/game/DebugPanel";
@@ -6,13 +8,33 @@ import { useGameInput } from "../../hooks/useGameInput";
 import { useAuth } from "../../context/authContext";
 
 const GameLayout = () => {
+	const location = useLocation();
 	const { accessToken } = useAuth();
-	const { state, myPlayerId, connected, socket, debug } = useGameSocket(accessToken);
+
+	const roomId = useMemo(() => {
+		const params = new URLSearchParams(location.search);
+		return params.get("roomId") || undefined;
+	}, [location.search]);
+
+	const roomPassword = useMemo(() => {
+		if (!roomId) return undefined;
+		return sessionStorage.getItem(`game-room-password:${roomId}`) || undefined;
+	}, [roomId]);
+
+	const { state, myPlayerId, connected, joinError, socket, debug } = useGameSocket(accessToken, {
+		roomId,
+		roomPassword,
+	});
 	useGameInput(socket);
 
 	return (
 		<div className="w-full h-screen flex justify-center bg-bg">
 			<div className="flex flex-col lg:relative w-full max-w-[1080px] h-full p-2 gap-2 lg:gap-0">
+				{joinError && (
+					<div className="shrink-0 rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+						{joinError}
+					</div>
+				)}
 				<div className="flex-1 min-h-0 lg:absolute lg:inset-2 rounded-xl overflow-hidden">
 					<GameScreen state={state} myPlayerId={myPlayerId} />
 				</div>

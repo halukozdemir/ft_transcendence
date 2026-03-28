@@ -19,6 +19,11 @@ function transformState(raw: any): GameState {
     x: FX + (p.x / SERVER_W) * FW,
     y: FY + (p.y / SERVER_H) * FH,
   }));
+  
+  const room = raw.room || {};
+  const playerCount = Number(room.playerCount ?? players.length ?? 0);
+  const maxPlayers = Number(room.maxPlayers ?? 2);
+  const availableSlots = Number(room.availableSlots ?? Math.max(0, maxPlayers - playerCount));
 
   return {
     players,
@@ -33,12 +38,30 @@ function transformState(raw: any): GameState {
       round: 1,
       timeLeft: raw.match?.timeRemainingSeconds ?? 0,
     },
+    room: {
+      id: room.id ?? null,
+      playerCount,
+      maxPlayers,
+      availableSlots,
+      isFull: Boolean(room.isFull ?? playerCount >= maxPlayers),
+      teams: {
+        red: Number(room.teams?.red ?? players.filter((p) => p.team === "red").length),
+        blue: Number(room.teams?.blue ?? players.filter((p) => p.team === "blue").length),
+      },
+      minPlayersPerTeam: Number(room.minPlayersPerTeam ?? 1),
+      maxPlayersPerTeam: Number(room.maxPlayersPerTeam ?? Math.max(1, Math.ceil(maxPlayers / 2))),
+    },
   };
 }
 
 interface Snapshot {
   state: GameState;
   time: number; // Server time in MS
+}
+
+interface UseGameSocketOptions {
+  roomId?: string;
+  roomPassword?: string;
 }
 
 function lerp(a: number, b: number, t: number): number {
@@ -66,14 +89,16 @@ function interpolate(from: GameState, to: GameState, t: number): GameState {
     } as BallState,
     score: to.score,
     match: to.match,
+    room: to.room,
   };
 }
 
-export function useGameSocket(accessToken?: string | null) {
+export function useGameSocket(accessToken?: string | null, options: UseGameSocketOptions = {}) {
   const socketRef = useRef<Socket | null>(null);
   const [state, setState] = useState<GameState | null>(null);
   const [myPlayerId, setMyPlayerId] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
+  const [joinError, setJoinError] = useState<string | null>(null);
   const bufferRef = useRef<Snapshot[]>([]);
   const rafRef = useRef<number>(0);
   const renderDelayRef = useRef(INITIAL_RENDER_DELAY);
@@ -82,6 +107,7 @@ export function useGameSocket(accessToken?: string | null) {
 
   // For server clock sync
   const serverOffsetRef = useRef<number | null>(null);
+  const joinedRef = useRef(false);
 
   useEffect(() => {
     if (!accessToken) {
@@ -92,15 +118,22 @@ export function useGameSocket(accessToken?: string | null) {
     const socket = io(window.location.origin, {
       path: "/ws/game/",
       transports: ["websocket"],
-      auth: { token: accessToken },
+      auth: {
+        token: accessToken,
+        roomId: options.roomId,
+        roomPassword: options.roomPassword,
+      },
     });
     socketRef.current = socket;
+    joinedRef.current = false;
 
     socket.on("connect", () => {
       setConnected(true);
+      setJoinError(null);
     });
 
     socket.on("joined", () => {
+      joinedRef.current = true;
       setMyPlayerId(socket.id ?? null);
     });
 
@@ -132,15 +165,38 @@ export function useGameSocket(accessToken?: string | null) {
     });
 
     socket.on("room_full", () => {
+      setJoinError("Oda dolu.");
       console.warn("Room is full");
+    });
+
+    socket.on("room_not_found", () => {
+      setJoinError("Oda bulunamadı.");
+    });
+
+    socket.on("room_invalid_password", () => {
+      setJoinError("Oda şifresi hatalı.");
     });
 
     socket.on("disconnect", () => {
       setConnected(false);
+      if (options.roomId && !joinedRef.current) {
+        setJoinError((prev: string | null) => prev || "Odaya katılamadı.");
+      }
     });
 
-    socket.on("error", (error) => {
+    socket.on("error", (error: any) => {
       console.error("Socket error:", error);
+    });
+
+    socket.on("connect_error", (error: any) => {
+      const message = String(error?.message || "").toLowerCase();
+      if (message.includes("authentication failed") || message.includes("no authentication token")) {
+        setJoinError("Oturum doğrulaması başarısız.");
+        return;
+      }
+      if (options.roomId && !joinedRef.current) {
+        setJoinError("Odaya katılamadı.");
+      }
     });
 
     // Snapshot interpolation loop
@@ -198,9 +254,10 @@ export function useGameSocket(accessToken?: string | null) {
 
     return () => {
       cancelAnimationFrame(rafRef.current);
+      joinedRef.current = false;
       socket.disconnect();
     };
-  }, [accessToken]);
+  }, [accessToken, options.roomId, options.roomPassword]);
 
   const debug = {
     getPacketRate: () => {
@@ -216,5 +273,5 @@ export function useGameSocket(accessToken?: string | null) {
     getLastRaw: () => lastRawRef.current,
   };
 
-  return { state, myPlayerId, connected, socket: socketRef, debug };
+  return { state, myPlayerId, connected, joinError, socket: socketRef, debug };
 }
