@@ -4,7 +4,7 @@ import { useAuth } from "../../context/authContext";
 import { authApi } from "../../services/authApi";
 
 const SettingsPage = () => {
-  const { user, accessToken, logout } = useAuth();
+  const { user, accessToken, logout, refreshProfile } = useAuth();
   const navigate = useNavigate();
 
   // --- Profil ---
@@ -50,12 +50,16 @@ const SettingsPage = () => {
     setProfileLoading(true);
     setProfileMsg(null);
     try {
-      await authApi.updateProfile(accessToken, {
+      const updatedProfile = await authApi.updateProfile(accessToken, {
         username: username !== user?.username ? username : undefined,
         avatar: avatarFile || undefined,
         banner: bannerFile || undefined,
       });
+      await refreshProfile();
       setProfileMsg({ type: "ok", text: "Profil güncellendi." });
+      setUsername(updatedProfile.username);
+      setAvatarPreview(updatedProfile.avatar || null);
+      setBannerPreview(updatedProfile.banner || null);
       setAvatarFile(null);
       setBannerFile(null);
     } catch (err) {

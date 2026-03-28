@@ -27,6 +27,7 @@ export interface UserProfile {
   username: string;
   email: string;
   avatar: string;
+  banner: string;
   online_status: boolean;
   friends: Array<{
     id: number;
@@ -115,10 +116,6 @@ export const authApi = {
 
   // Update Profile
   updateProfile: async (accessToken: string, payload: { username?: string; avatar?: File; banner?: File }): Promise<UserProfile> => {
-    if (payload.banner) {
-      throw new Error("Kapak fotoğrafı yükleme henüz desteklenmiyor.");
-    }
-
     if (payload.avatar) {
       const avatarFormData = new FormData();
       avatarFormData.append("avatar", payload.avatar);
@@ -128,6 +125,17 @@ export const authApi = {
         body: avatarFormData,
       });
       await handleResponse(avatarRes);
+    }
+
+    if (payload.banner) {
+      const bannerFormData = new FormData();
+      bannerFormData.append("banner", payload.banner);
+      const bannerRes = await fetch(`${API_BASE_URL}/profile/banner/`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${accessToken}` },
+        body: bannerFormData,
+      });
+      await handleResponse(bannerRes);
     }
 
     if (payload.username) {
@@ -142,7 +150,7 @@ export const authApi = {
       return handleResponse(profileRes);
     }
 
-    // Refresh and return the latest profile after avatar-only updates
+    // Refresh and return the latest profile after avatar/banner-only updates
     const profileRes = await fetch(`${API_BASE_URL}/profile/`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });

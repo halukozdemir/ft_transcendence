@@ -13,6 +13,7 @@ interface AuthContextType {
   register: (email: string, username: string, password: string, password2: string) => Promise<void>;
   logout: () => Promise<void>;
   setTokensFromOAuth: (access: string, refresh: string) => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,14 +29,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const refreshProfile = async () => {
+    if (!accessToken) return;
+    const profile = await authApi.getProfile(accessToken);
+    setUser(profile);
+    setError(null);
+  };
+
   // Fetch user profile when token is available
   useEffect(() => {
     if (accessToken && !user) {
       (async () => {
         try {
-          const profile = await authApi.getProfile(accessToken);
-          setUser(profile);
-          setError(null);
+          await refreshProfile();
         } catch (err) {
           console.error("Failed to fetch profile", err);
           // Try to refresh token
@@ -66,7 +72,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setRefreshToken(response.tokens.refresh);
       localStorage.setItem("accessToken", response.tokens.access);
       localStorage.setItem("refreshToken", response.tokens.refresh);
-      setUser(response.user as unknown as UserProfile);
+      const profile = await authApi.getProfile(response.tokens.access);
+      setUser(profile);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Login failed";
       setError(errorMsg);
@@ -85,7 +92,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setRefreshToken(response.tokens.refresh);
       localStorage.setItem("accessToken", response.tokens.access);
       localStorage.setItem("refreshToken", response.tokens.refresh);
-      setUser(response.user as unknown as UserProfile);
+      const profile = await authApi.getProfile(response.tokens.access);
+      setUser(profile);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Registration failed";
       setError(errorMsg);
@@ -137,6 +145,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         register,
         logout,
         setTokensFromOAuth,
+        refreshProfile,
       }}
     >
       {children}
