@@ -16,6 +16,7 @@ from .serializers import(
     UserSerializer,
     ProfileSerializer,
     AvatarSerializer,
+    BannerSerializer,
     FriendRequestSerializer,
     PasswordChangeSerializer,
 )
@@ -114,6 +115,24 @@ class AvatarUploadView(APIView):
 
     def put(self, request):
         serializer = AvatarSerializer(
+            request.user,
+            data=request.data,
+            partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+    def post(self, request):
+        return self.put(request)
+
+# ──────────────── Banner Upload ────────────────
+class BannerUploadView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser]
+
+    def put(self, request):
+        serializer = BannerSerializer(
             request.user,
             data=request.data,
             partial=True

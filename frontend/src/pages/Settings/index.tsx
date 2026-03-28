@@ -59,8 +59,8 @@ const SettingsPage = () => {
       setProfileMsg({ type: "ok", text: "Profil güncellendi." });
       setUsername(updatedProfile.username);
       setAvatarPreview(updatedProfile.avatar || null);
+      setBannerPreview(updatedProfile.banner || null);
       setAvatarFile(null);
-      setBannerPreview(null);
       setBannerFile(null);
     } catch (err) {
       setProfileMsg({ type: "err", text: err instanceof Error ? err.message : "Hata oluştu." });

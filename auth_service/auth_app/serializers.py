@@ -50,6 +50,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 class ProfileSerializer(serializers.ModelSerializer):#bunu sor
     avatar = serializers.SerializerMethodField()
+    banner = serializers.SerializerMethodField()
     friends = UserSerializer(
         many=True,
         read_only=True
@@ -63,9 +64,17 @@ class ProfileSerializer(serializers.ModelSerializer):#bunu sor
         except Exception:
             return None
 
+    def get_banner(self, obj):
+        if not obj.banner:
+            return None
+        try:
+            return obj.banner.url
+        except Exception:
+            return None
+
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'avatar', 'online_status', 'friends']
+        fields = ['id', 'username', 'email', 'avatar', 'banner', 'online_status', 'friends']
         read_only_fields = ['id', 'email']
 
 class FriendRequestSerializer(serializers.Serializer):
@@ -79,6 +88,19 @@ class AvatarSerializer(serializers.ModelSerializer):
     def validate_avatar(self, value):
         if value.size > 5 * 1024 * 1024:
             raise serializers.ValidationError("Avatar must be under 5MB.")
+        allowed_types = ['image/jpeg', 'image/png', 'image/webp']
+        if value.content_type not in allowed_types:
+                raise serializers.ValidationError("Only JPEG, PNG and WEBP allowed.")
+        return value
+
+class BannerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['banner']
+
+    def validate_banner(self, value):
+        if value.size > 10 * 1024 * 1024:
+            raise serializers.ValidationError("Banner must be under 10MB.")
         allowed_types = ['image/jpeg', 'image/png', 'image/webp']
         if value.content_type not in allowed_types:
                 raise serializers.ValidationError("Only JPEG, PNG and WEBP allowed.")

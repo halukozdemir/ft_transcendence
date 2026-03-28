@@ -8,6 +8,11 @@ class User(AbstractUser):
         default='avatars/default.png',
         blank=True
     )
+    banner = models.ImageField(
+        upload_to='banners/',
+        default='banners/default.png',
+        blank=True
+    )
     online_status = models.BooleanField(default=False)
     intra_id = models.IntegerField(
         unique=True,

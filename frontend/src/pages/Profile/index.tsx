@@ -23,7 +23,7 @@ const ProfilePage = () => {
     level: 24,
     rank: 4201,
     avatarUrl: user.avatar || "/profile.png",
-    bannerUrl: "/banner.png",
+    bannerUrl: user.banner || "/banner.png",
     isOnline: user.online_status,
   };
 
