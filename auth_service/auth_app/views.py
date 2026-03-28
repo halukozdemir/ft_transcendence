@@ -121,6 +121,9 @@ class AvatarUploadView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
+
+    def post(self, request):
+        return self.put(request)
     
 # ──────────────── User Detail (public) ────────────────
 class UserDetailView(generics.RetrieveAPIView):

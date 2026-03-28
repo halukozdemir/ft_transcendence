@@ -118,6 +118,10 @@ CORS_ALLOWED_ORIGINS = [
     'https://127.0.0.1',
 ]
 
+# ---------- Reverse proxy (gateway) ----------
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+
 # ---------- OAuth 42 ----------
 OAUTH_42_CLIENT_ID = os.environ.get('OAUTH_42_CLIENT_ID', '')
 OAUTH_42_CLIENT_SECRET = os.environ.get('OAUTH_42_CLIENT_SECRET', '')

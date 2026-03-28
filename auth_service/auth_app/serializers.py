@@ -33,16 +33,36 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
 
 class UserSerializer(serializers.ModelSerializer):
+    avatar = serializers.SerializerMethodField()
+
+    def get_avatar(self, obj):
+        if not obj.avatar:
+            return None
+        try:
+            return obj.avatar.url
+        except Exception:
+            return None
+
     class Meta:
         model = User
         fields = ['id', 'username', 'avatar', 'online_status']
         read_only_fields = fields
 
 class ProfileSerializer(serializers.ModelSerializer):#bunu sor
+    avatar = serializers.SerializerMethodField()
     friends = UserSerializer(
         many=True,
         read_only=True
     )
+
+    def get_avatar(self, obj):
+        if not obj.avatar:
+            return None
+        try:
+            return obj.avatar.url
+        except Exception:
+            return None
+
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'avatar', 'online_status', 'friends']
