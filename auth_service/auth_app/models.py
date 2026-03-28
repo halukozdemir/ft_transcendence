@@ -67,32 +67,61 @@ class PlayerStats(models.Model):
 
 
 class MatchRecord(models.Model):
-    """Match game record"""
-    player1 = models.ForeignKey(User, on_delete=models.CASCADE, related_name='matches_as_p1')
-    player2 = models.ForeignKey(User, on_delete=models.CASCADE, related_name='matches_as_p2')
-    winner = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
+    """Team-based match record - supports 1v1, 2v2, 3v3, etc."""
+    winner_team = models.CharField(
+        max_length=10,
+        choices=[('red', 'Red'), ('blue', 'Blue')],
         null=True,
-        related_name='matches_won'
+        blank=True
     )
-    score_p1 = models.IntegerField(default=0)
-    score_p2 = models.IntegerField(default=0)
+    score_red = models.IntegerField(default=0)
+    score_blue = models.IntegerField(default=0)
     duration_seconds = models.IntegerField(default=0)
+    end_reason = models.CharField(
+        max_length=30,
+        choices=[
+            ('score_limit', 'Score Limit'),
+            ('time_limit', 'Time Limit'),
+            ('time_limit_draw', 'Time Limit Draw'),
+            ('forfeit', 'Forfeit'),
+            ('disconnect', 'Disconnect'),
+        ],
+        default='score_limit'
+    )
     played_at = models.DateTimeField(auto_now_add=True)
-    replay_url = models.URLField(blank=True, null=True)
-    
+
     class Meta:
         ordering = ['-played_at']
         indexes = [
             models.Index(fields=['-played_at']),
-            models.Index(fields=['player1', '-played_at']),
-            models.Index(fields=['player2', '-played_at']),
         ]
 
     def __str__(self):
-        return f"{self.player1.username} vs {self.player2.username}"
+        return f"Match #{self.id} — Red {self.score_red}:{self.score_blue} Blue"
 
+class MatchPlayer(models.Model):
+    """Links a user to a match with their team"""
+    match = models.ForeignKey(
+        MatchRecord,
+        on_delete=models.CASCADE,
+        related_name='match_players'
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='match_participations'
+    )
+    team = models.CharField(
+        max_length=10,
+        choices=[('red', 'Red'), ('blue', 'Blue')]
+    )
+
+    class Meta:
+        unique_together = ['match', 'user']
+        ordering = ['team', 'id']
+    
+    def __str__(self):
+        return f"{self.user.username} — {self.team} — Match #{self.match_id}"
 
 class Achievement(models.Model):
     """Achievement badges"""

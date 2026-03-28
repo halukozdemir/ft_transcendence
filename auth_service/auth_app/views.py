@@ -19,7 +19,7 @@ from .serializers import(
     FriendRequestSerializer,
     PasswordChangeSerializer,
 )
-from .models import PlayerStats, MatchRecord, Achievement, UserAchievement
+from .models import PlayerStats, MatchRecord, MatchPlayer, Achievement, UserAchievement
 
 User = get_user_model()
 
@@ -145,7 +145,7 @@ class UserStatsView(APIView):
         
         # Calculate ranking
         total_players = User.objects.count()
-        higher_elo = User.objects.filter(stats__elo_rating__gt=stats.elo_rating).count()
+        higher_elo = User.objects.filter(elo_rating__gt=user.elo_rating).count()
         ranking = higher_elo + 1
         
         return Response({
@@ -155,7 +155,7 @@ class UserStatsView(APIView):
             'wins': stats.wins,
             'losses': stats.losses,
             'win_rate': stats.win_rate,
-            'elo_rating': stats.elo_rating,
+            'elo_rating': user.elo_rating,
             'tier': user.tier,
             'ranking': ranking,
         })
@@ -164,7 +164,7 @@ class UserStatsView(APIView):
 class UserMatchHistoryView(APIView):
     """Get user's match history"""
     permission_classes = [permissions.AllowAny]
-    
+
     def get(self, request, user_id):
         try:
             user = User.objects.get(id=user_id)
@@ -172,31 +172,49 @@ class UserMatchHistoryView(APIView):
             return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
         
         limit = int(request.query_params.get('limit', 20))
-        
-        # Get matches where user is player1 or player2
-        matches = MatchRecord.objects.filter(
-            Q(player1=user) | Q(player2=user)
-        ).order_by('-played_at')[:limit]
-        
+
+        participations = MatchPlayer.objects.filter(
+            user=user
+        ).select_related('match').order_by('-match__played_at')[:limit]
+
         result = []
-        for match in matches:
-            opponent = match.player2 if match.player1 == user else match.player1
-            is_player1 = match.player1 == user
-            my_score = match.score_p1 if is_player1 else match.score_p2
-            opponent_score = match.score_p2 if is_player1 else match.score_p1
+        for mp in participations:
+            match = mp.match
+            my_team = mp.team
+            opponent_team = 'blue' if my_team == 'red' else 'red'
+            my_score = match.score_red if my_team == 'red' else match.score_blue
+            opponent_score = match.score_blue if my_team == 'red' else match.score_red
+
+            opponents = MatchPlayer.objects.filter(
+                match=match, team=opponent_team
+            ).select_related('user')
+
+            if match.winner_team == my_team:
+                match_result = 'win'
+            elif match.winner_team is None:
+                match_result = 'draw'
+            else:
+                match_result = 'loss'
             
             result.append({
                 'id': match.id,
-                'opponent_id': opponent.id,
-                'opponent_name': opponent.username,
-                'opponent_avatar': opponent.avatar.url if opponent.avatar else None,
-                'result': 'win' if match.winner == user else 'loss' if match.winner else 'draw',
+                'result': match_result,
+                'my_team': my_team,
                 'my_score': my_score,
                 'opponent_score': opponent_score,
+                'opponents': [
+                    {
+                        'id': op.user.id,
+                        'username': op.user.username,
+                        'avatar': op.user.avatar.url if op.user.avatar else None,
+                    }
+                    for op in opponents
+                ],
                 'played_at': match.played_at.isoformat(),
                 'duration_seconds': match.duration_seconds,
+                'end_reason': match.end_reason
             })
-        
+
         return Response(result)
 
 # ──────────────── User Achievements ────────────────
@@ -229,31 +247,26 @@ class UserAchievementsView(APIView):
 class LeaderboardView(APIView):
     """Get global leaderboard"""
     permission_classes = [permissions.AllowAny]
-    
+
     def get(self, request):
         limit = int(request.query_params.get('limit', 50))
-        
-        leaderboard = User.objects.annotate(
-            total_matches=Count('matches_as_p1') + Count('matches_as_p2'),
-            wins=Count(
-                Case(
-                    When(matches_won__isnull=False, then=1),
-                    output_field=IntegerField()
-                )
-            )
-        ).order_by('-stats__elo_rating')[:limit]
-        
+
+        users = User.objects.filter(
+            stats__total_matches__gt=0
+        ).select_related('stats').order_by('-elo_rating')[:limit]
+
         result = []
-        for rank, user in enumerate(leaderboard, 1):
+        for rank, user in enumerate(users, 1):
             result.append({
                 'rank': rank,
                 'user_id': user.id,
                 'username': user.username,
                 'avatar': user.avatar.url if user.avatar else None,
-                'elo_rating': user.stats.elo_rating if hasattr(user, 'stats') else 1200,
+                'elo_rating': user.elo_rating,
                 'tier': user.tier,
-                'total_matches': user.total_matches,
-                'wins': user.wins,
+                'total_matches': user.stats.total_matches,
+                'wins': user.stats.wins,
+                'win_rate': user.stats.win_rate
             })
         
         return Response(result)
@@ -423,3 +436,77 @@ class OAuth42CallbackView(APIView):
             f"&refresh={str(refresh)}"
         )
         return redirect(frontend_url)
+    
+# ──────────────── User Match History ────────────────
+class MatchResultView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        secret = request.headers.get('X-Service-Secret', '')
+        expected = getattr(settings, 'SERVICE_SECRET', '')
+        if not expected or secret != expected:
+            return Response(
+                {'detail': 'Unauthorized service call.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        data = request.data
+        winner_team = data.get('winner_team')
+        score_red = int(data.get('score_red', 0))
+        score_blue = int(data.get('score_blue', 0))
+        duration_seconds = int(data.get('duration_seconds', 0))
+        red_player_ids = data.get('red_player_ids', [])
+        blue_player_ids = data.get('blue_player_ids', [])
+        end_reason = data.get('end_reason', 'score_limit')
+
+        all_ids = red_player_ids + blue_player_ids
+        users = {u.id: u for u in User.objects.filter(id__in=all_ids)}
+
+        if len(users) < 2:
+            return Response(
+                {'detail': 'Not enough valid users.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        match = MatchRecord.objects.create(
+            winner_team=winner_team,
+            score_red=score_red,
+            score_blue=score_blue,
+            duration_seconds=duration_seconds,
+            end_reason=end_reason
+        )
+
+        for uid in red_player_ids:
+            if uid in users:
+                MatchPlayer.objects.create(match=match, user=users[uid], team='red')
+        for uid in blue_player_ids:
+            if uid in users:
+                MatchPlayer.objects.create(match=match, user=users[uid], team='blue')
+
+        winner_ids = red_player_ids if winner_team == 'red' else blue_player_ids if winner_team == 'blue' else []
+        loser_ids = blue_player_ids if winner_team == 'red' else red_player_ids if winner_team == 'blue' else []
+
+        for uid in all_ids:
+            if uid not in users:
+                continue
+            stats, _ = PlayerStats.objects.get_or_create(user=users[uid])
+            stats.total_matches += 1
+
+            if uid in winner_ids:
+                stats.wins += 1
+            elif uid in loser_ids:
+                stats.losses += 1
+            else:
+                stats.draws += 1
+
+            if stats.total_matches > 0:
+                stats.win_rate = round(stats.wins / stats.total_matches * 100, 1)
+            
+            from django.utils import timezone
+            stats.last_match_date = timezone.now()
+            stats.save()
+        
+        return Response(
+            {'detail': 'Match recorded.', 'match_id': match.id},
+            status=status.HTTP_201_CREATED
+        )
