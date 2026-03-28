@@ -119,6 +119,18 @@ class AvatarUploadView(APIView):
             partial=True
         )
         serializer.is_valid(raise_exception=True)
+
+        avatar_file = request.FILES.get('avatar')
+        if avatar_file:
+            from .moderation import check_avatar_safety
+            result = check_avatar_safety(avatar_file)
+            if not result['safe']:
+                return Response(
+                    {'detail': 'Image rejected: inappropriate content detected.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            avatar_file.seek(0)
+
         serializer.save()
         return Response(serializer.data)
     

@@ -10,6 +10,7 @@ interface PlayerMessage {
   sender: string;
   team: TeamColor;
   content: string;
+  moderated?: boolean;
 }
 
 interface SystemMessage {
@@ -40,6 +41,7 @@ type WsPayload = {
   message?: string;
   sender?: string;
   timestamp?: string;
+  moderated?: boolean;
 };
 
 function createId() {
@@ -120,6 +122,7 @@ export default function Chat({ roomName = "game", username = "Player" }: ChatPro
             sender: data.sender || "anonymous",
             team: "spectator",
             content: message,
+            moderated: data.moderated || false,
           },
         ]);
       } catch {
@@ -287,7 +290,10 @@ function ChatMsg({ msg }: { msg: PlayerMessage }) {
       <p className="text-sm leading-snug">
         <span className={`font-bold ${TEAM_COLOR[msg.team]}`}>{msg.sender}:</span>
         {" "}
-        <span className="text-white font-semibold">{msg.content}</span>
+        <span className={`font-semibold ${msg.moderated ? "text-muted italic" : "text-white"}`}>
+          {msg.content}
+        </span>
+        {msg.moderated && <span className="text-xs text-muted ml-1" title="This message was filtered">*</span>}
       </p>
     </div>
   );

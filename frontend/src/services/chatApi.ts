@@ -12,6 +12,7 @@ export interface ChatMessage {
   created_at: string;
   edited_at: string | null;
   is_edited: boolean;
+  is_moderated: boolean;
 }
 
 export interface ChatRoomMember {

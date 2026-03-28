@@ -10,6 +10,7 @@ from .serializers import (
     ChatRoomDetailSerializer,
     ChatMessageSerializer,
 )
+from .moderation import moderate_text_sync
 
 
 class IsAuthenticated(permissions.BasePermission):
@@ -65,12 +66,19 @@ class ChatRoomViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        # Moderate text through AI service
+        mod_result = moderate_text_sync(text)
+        is_moderated = mod_result['flagged']
+        if is_moderated:
+            text = mod_result['censored']
+
         # Create message
         message = ChatMessage.objects.create(
             room=room,
             sender_id=sender_id,
             text=text,
             message_type=message_type,
+            is_moderated=is_moderated,
         )
         
         serializer = ChatMessageSerializer(message)
