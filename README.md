@@ -11,25 +11,66 @@
 Proje 6 ana servis + 1 veritabani + 1 cache/broker olarak Docker container'larinda calisir.
 Tum servisler tek bir PostgreSQL instance'i uzerindeki ayni veritabanina (`ft_transcendence`) baglanir.
 
-```
-                    ┌─────────────────────────┐
-                    │   Gateway (Nginx:443)    │
-                    │   SSL + Reverse Proxy    │
-                    └────────┬────────────────┘
-                             │
-         ┌───────────┬───────┼───────┬───────────┐
-         │           │       │       │           │
-    ┌────▼───┐ ┌─────▼──┐ ┌─▼────┐ ┌▼──────┐ ┌──▼────┐
-    │Frontend│ │  Auth  │ │ Game │ │ Chat  │ │  AI   │
-    │ React  │ │ Django │ │Node.js│ │Django │ │FastAPI│
-    │ :80    │ │ :8000  │ │:8001 │ │:8003  │ │:8002  │
-    └────────┘ └───┬────┘ └──┬───┘ └──┬────┘ └───────┘
-                   │         │        │
-                   └─────────┼────────┘
-                        ┌────▼────┐  ┌────────┐
-                        │PostgreSQL│  │ Redis  │
-                        │  :5432  │  │ Broker │
-                        └─────────┘  └────────┘
+```mermaid
+graph TB
+    subgraph Client["Browser - React + Vite"]
+        FE["frontend/src/"]
+        FE --> Services["services/<br/>authApi.ts | chatApi.ts<br/>gameApi.ts | profileApi.ts"]
+        FE --> Pages["pages/<br/>Auth, Dashboard, Game<br/>Profile, Settings, Leaderboard"]
+        FE --> WS_Client["useGameSocket.ts<br/>WebSocket client"]
+    end
+
+    subgraph Gateway["Nginx Gateway - gateway/nginx.conf"]
+        HTTPS["HTTPS :443<br/>SSL + Reverse Proxy"]
+    end
+
+    Services -->|"HTTPS"| HTTPS
+    WS_Client -->|"WSS"| HTTPS
+
+    HTTPS -->|"/api/auth/*"| AUTH
+    HTTPS -->|"/api/chat/*"| CHAT
+    HTTPS -->|"/api/game/*"| GAME_REST
+    HTTPS -->|"/ws/game/*"| GAME_WS
+    HTTPS -->|"/api/ai/*"| AI
+
+    subgraph AuthService["auth_service - Django + DRF :8000"]
+        AUTH["views.py — 19 endpoint<br/>register, login, profile, friends<br/>leaderboard, match-result, OAuth"]
+        AUTH_MODELS["models.py<br/>User, PlayerStats<br/>MatchRecord, Achievement<br/>FriendRequest"]
+        AUTH_SER["serializers.py<br/>JSON serialization"]
+        AUTH --> AUTH_MODELS
+        AUTH --> AUTH_SER
+    end
+
+    subgraph ChatService["chat_service - Django + Channels :8003"]
+        CHAT["views.py — 11 endpoint<br/>rooms CRUD, messages<br/>join/leave, my_rooms"]
+        CHAT_WS["consumers.py<br/>WebSocket handler"]
+        CHAT_MODELS["models.py<br/>ChatRoom, ChatMessage<br/>ChatRoomMember"]
+        CHAT --> CHAT_MODELS
+        CHAT_WS --> CHAT_MODELS
+    end
+
+    subgraph GameService["game_service - Express + Socket.io :8001"]
+        GAME_REST["server.js — REST<br/>rooms list/create<br/>health, render-config"]
+        GAME_WS["server.js — Socket.io<br/>real-time game state<br/>input, matchmaking"]
+        GAME_LOGIC["game/<br/>GameRoom.js | Ball.js<br/>Player.js | physics.js"]
+        GAME_REST --> GAME_LOGIC
+        GAME_WS --> GAME_LOGIC
+    end
+
+    subgraph AIService["ai_service - FastAPI :8002"]
+        AI["main.py<br/>sadece /health<br/>henuz implement edilmedi"]
+    end
+
+    subgraph Databases["PostgreSQL + Redis"]
+        AUTH_DB[("auth_db<br/>Users, Stats<br/>Matches, Achievements")]
+        CHAT_DB[("chat_db<br/>Rooms, Messages<br/>Members")]
+        REDIS[("Redis :6379<br/>WebSocket Broker")]
+    end
+
+    AUTH_MODELS -->|"Django ORM"| AUTH_DB
+    CHAT_MODELS -->|"Django ORM"| CHAT_DB
+    CHAT_WS --> REDIS
+    GAME_WS -->|"HTTP POST<br/>match-result"| AUTH
 ```
 
 ### Servisler
@@ -108,7 +149,7 @@ Tarayicidan `https://localhost` adresini ac.
 | `OAUTH_42_CLIENT_SECRET` | 42 API client secret | - |
 | `OAUTH_42_REDIRECT_URI` | OAuth callback URL | `https://localhost/api/auth/oauth/callback` |
 
-> **Not:** Tek PostgreSQL container'i kullaniliyor. `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` degiskenleri hem container'in kendisi hem de auth/chat/game servisleri tarafindan ortaklanir. `database/init.sql` dosyasi game ve chat tablolarini otomatik olusturur, auth tablolari ise Django migrations ile gelir.
+> **Not:** Tek PostgreSQL container'i kullaniliyor. `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` degiskenleri hem container'in kendisi hem de auth/chat/game servisleri tarafindan ortaklanir. Tum tablolar Django migrations ile yonetilir.
 
 ### Komutlar
 
@@ -130,21 +171,68 @@ Tarayicidan `https://localhost` adresini ac.
 
 ---
 
+## Public API
+
+Auth Service uzerinden REST API sunulmaktadir. Tum endpoint'ler `/api/auth/` altindadir.
+
+### HTTP Method'lar
+
+| Method | Endpoint | Aciklama |
+|--------|----------|----------|
+| **GET** | `/api/auth/profile/` | Kullanici profili |
+| **GET** | `/api/auth/users/<id>/` | Public kullanici bilgisi |
+| **GET** | `/api/auth/users/<id>/stats/` | Oyuncu istatistikleri |
+| **GET** | `/api/auth/users/<id>/matches/` | Mac gecmisi |
+| **GET** | `/api/auth/users/<id>/achievements/` | Basarimlar |
+| **GET** | `/api/auth/friends/` | Arkadas listesi |
+| **GET** | `/api/auth/leaderboard/` | Skor tablosu |
+| **POST** | `/api/auth/register/` | Yeni kullanici kaydi |
+| **POST** | `/api/auth/login/` | Giris + JWT token |
+| **POST** | `/api/auth/logout/` | Cikis + token blacklist |
+| **POST** | `/api/auth/friends/add/` | Arkadas ekle |
+| **POST** | `/api/auth/token/refresh/` | JWT token yenile |
+| **PUT** | `/api/auth/profile/avatar/` | Avatar yukle |
+| **PUT** | `/api/auth/password/change/` | Sifre degistir |
+| **DELETE** | `/api/auth/friends/<user_id>/` | Arkadas cikar |
+
+### Authentication
+
+JWT Bearer Token ile korunmaktadir. Login/register sonrasi `access` ve `refresh` token donulur.
+
+```
+Authorization: Bearer <access_token>
+```
+
+### Rate Limiting
+
+Tum endpoint'lere rate limiting uygulanmaktadir:
+
+| Kullanici Tipi | Limit |
+|----------------|-------|
+| Anonim (login olmamis) | 30 istek / dakika |
+| Authenticated (login olmus) | 100 istek / dakika |
+
+Limit asildiginda `429 Too Many Requests` + `Retry-After` header donulur.
+
+---
+
 ## Veritabani Yapisi
 
 Tek PostgreSQL instance, tek `ft_transcendence` veritabani:
 
 ```
 ft_transcendence (PostgreSQL)
-├── Auth tablolari (Django migrations ile)
-│   └── auth_app_user — kullanici, profil, arkadas listesi
-├── Game tablolari (init.sql ile)
-│   ├── matches — mac gecmisi, skorlar
-│   └── achievements — basarimlar
-└── Chat tablolari (init.sql ile)
-    ├── channels — sohbet kanallari
-    ├── messages — mesajlar
-    └── channel_members — kanal uyeleri
+├── Auth tablolari (Django migrations)
+│   ├── auth_app_user — kullanici, profil, arkadas listesi
+│   ├── auth_app_playerstats — oyuncu istatistikleri
+│   ├── auth_app_matchrecord — mac kayitlari
+│   ├── auth_app_matchplayer — mac oyunculari
+│   ├── auth_app_achievement — basarimlar
+│   └── auth_app_userachievement — kazanilan basarimlar
+└── Chat tablolari (Django migrations)
+    ├── chat_app_chatroom — sohbet odalari
+    ├── chat_app_chatmessage — mesajlar
+    └── chat_app_chatroommember — oda uyeleri
 ```
 
 ---
@@ -187,8 +275,6 @@ ft_transcendence/
 ├── ai_service/           # FastAPI - AI Moderation
 │   ├── Dockerfile
 │   └── app/main.py
-├── database/             # DB init
-│   └── init.sql          # Game + Chat tablo semalari
 ├── ssl/                  # SSL sertifikalari (gitignore)
 ├── docker-compose.yml
 ├── Makefile

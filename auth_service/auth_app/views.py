@@ -325,25 +325,21 @@ class AddFriendView(APIView):
 
 class RemoveFriendView(APIView):
     permission_classes = [permissions.IsAuthenticated]
-    
-    def post(self, request):
-        serializer = FriendRequestSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
 
+    def delete(self, request, user_id):
         try:
-            friend = User.objects.get(
-                id=serializer.validated_data['user_id']
-            )
+            friend = User.objects.get(id=user_id)
         except User.DoesNotExist:
             return Response(
                 {'detail': 'User not found.'},
                 status=status.HTTP_404_NOT_FOUND
             )
-        
+
         request.user.friends.remove(friend)
         friend.friends.remove(request.user)
         return Response(
-            {'detail': f'Removed {friend.username}.'}
+            {'detail': f'Removed {friend.username}.'},
+            status=status.HTTP_204_NO_CONTENT
         )
     
 class FriendListView(generics.ListAPIView):
