@@ -2,7 +2,7 @@
 # ft_transcendence - Makefile
 # ============================================
 
-.PHONY: all build up down restart logs clean ssl help test test-auth
+.PHONY: all build up down restart logs clean ssl help test test-auth test-ai migrate makemigrations
 
 # Default target
 all: ssl build up
@@ -57,13 +57,31 @@ migrate-auth:
 migrate-chat:
 	docker-compose exec chat_service python manage.py migrate
 
+# Run makemigrations + migrate for all Django services
+makemigrations:
+	docker-compose exec auth_service python manage.py makemigrations
+	docker-compose exec chat_service python manage.py makemigrations
+
+migrate: makemigrations
+	docker-compose exec auth_service python manage.py migrate
+	docker-compose exec chat_service python manage.py migrate
+
+# Run AI service tests (specific file: make test-ai T=test_image)
+test-ai:
+ifdef T
+	docker-compose exec ai_service pytest tests/$(T).py -v
+else
+	docker-compose exec ai_service pytest -v
+endif
+
 # Create superuser for auth service
 superuser:
 	docker-compose exec auth_service python manage.py createsuperuser
 
-# Run all tests
+# Run all tests (auth + ai)
 test:
 	docker-compose exec auth_service python manage.py test auth_app.tests -v 2
+	docker-compose exec ai_service pytest -v
 
 # Run auth tests only (specific file: make test-auth T=test_login)
 test-auth:
@@ -91,7 +109,12 @@ help:
 	@echo "  make restart    - Restart all services"
 	@echo "  make logs       - View logs for all services"
 	@echo "  make logs-auth_service  - View logs for auth service"
-	@echo "  make migrate-chat      - Run migrations for chat service"
+	@echo "  make migrate           - makemigrations + migrate (auth + chat)"
+	@echo "  make makemigrations    - Generate migrations (auth + chat)"
+	@echo "  make migrate-auth      - Migrate auth service only"
+	@echo "  make migrate-chat      - Migrate chat service only"
+	@echo "  make test-ai           - Run all AI tests"
+	@echo "  make test-ai T=test_image  - Run specific AI test file"
 	@echo "  make clean      - Remove everything (containers, volumes, images)"
 	@echo "  make status     - Show status of all containers"
 	@echo "  make superuser  - Create Django superuser (auth)"

@@ -58,7 +58,7 @@ const Navbar = () => {
           <div className="flex items-center gap-3">
             <div className="hidden items-center gap-2 rounded-full border border-white/5 bg-[rgba(40,40,57,0.65)] px-3 py-1.5 md:flex">
               <span className="size-2 rounded-full bg-green-500" />
-              <span className="text-xs font-semibold text-slate-300">ÇEVRIMIÇI</span>
+              <span className="text-xs font-semibold text-slate-300">ÇEVRİMİÇİ</span>
             </div>
 
             <button

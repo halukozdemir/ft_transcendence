@@ -10,27 +10,34 @@ const FriendsPage = () => {
   const [searchText, setSearchText] = useState("");
   const [message, setMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      if (!accessToken) return;
-      setLoading(true);
-      try {
-        const result = await profileApi.getAllUsers(accessToken, searchText || undefined, 100);
-        setUsers(result);
-        setMessage(null);
-      } catch (err) {
-        setMessage({ type: "err", text: err instanceof Error ? err.message : "Hata oluştu" });
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchUsers = async (showLoading = true) => {
+    if (!accessToken) return;
+    if (showLoading) setLoading(true);
+    try {
+      const result = await profileApi.getAllUsers(accessToken, searchText || undefined, 100);
+      setUsers(result);
+      setMessage(null);
+    } catch (err) {
+      setMessage({ type: "err", text: err instanceof Error ? err.message : "Hata oluştu" });
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  // Initial fetch + debounced search
+  useEffect(() => {
     const delayTimer = setTimeout(() => {
       fetchUsers();
     }, 300);
-
     return () => clearTimeout(delayTimer);
   }, [searchText, accessToken]);
+
+  // Poll every 5s for presence updates
+  useEffect(() => {
+    if (!accessToken) return;
+    const interval = setInterval(() => fetchUsers(false), 5000);
+    return () => clearInterval(interval);
+  }, [accessToken, searchText]);
 
   const handleAddFriend = async (targetUserId: number) => {
     if (!accessToken) return;

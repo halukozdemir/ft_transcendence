@@ -63,6 +63,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [accessToken, user, refreshToken]);
 
+  // Presence heartbeat — ping every 30s, stops when tab closes
+  useEffect(() => {
+    if (!accessToken || !user) return;
+
+    authApi.setPresence(accessToken, "online");
+    const interval = setInterval(() => {
+      authApi.setPresence(accessToken, "online");
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [accessToken, user]);
+
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     setError(null);

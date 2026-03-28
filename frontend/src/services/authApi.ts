@@ -177,6 +177,18 @@ export const authApi = {
     if (!res.ok) return handleResponse(res);
   },
 
+  // Presence
+  setPresence: async (accessToken: string, status: "online" | "offline"): Promise<void> => {
+    await fetch(`${API_BASE_URL}/presence/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ status }),
+    });
+  },
+
   // OAuth 42 Redirect
   getOAuth42Url: (): string => `${API_BASE_URL}/oauth/42/`,
 };

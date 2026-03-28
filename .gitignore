@@ -25,3 +25,7 @@ Thumbs.db
 
 ## Media uploads
 auth_service/media/
+
+## AI test fixtures (NSFW test images - do not commit)
+ai_service/tests/fixtures/*
+!ai_service/tests/fixtures/.gitkeep

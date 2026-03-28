@@ -32,8 +32,11 @@ class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
 
+PRESENCE_TIMEOUT = 5  # seconds
+
 class UserSerializer(serializers.ModelSerializer):
     avatar = serializers.SerializerMethodField()
+    online_status = serializers.SerializerMethodField()
 
     def get_avatar(self, obj):
         if not obj.avatar:
@@ -43,14 +46,21 @@ class UserSerializer(serializers.ModelSerializer):
         except Exception:
             return None
 
+    def get_online_status(self, obj):
+        if not obj.last_seen:
+            return False
+        from django.utils import timezone
+        return (timezone.now() - obj.last_seen).total_seconds() < PRESENCE_TIMEOUT
+
     class Meta:
         model = User
         fields = ['id', 'username', 'avatar', 'online_status']
         read_only_fields = fields
 
-class ProfileSerializer(serializers.ModelSerializer):#bunu sor
+class ProfileSerializer(serializers.ModelSerializer):
     avatar = serializers.SerializerMethodField()
     banner = serializers.SerializerMethodField()
+    online_status = serializers.SerializerMethodField()
     friends = UserSerializer(
         many=True,
         read_only=True
@@ -71,6 +81,12 @@ class ProfileSerializer(serializers.ModelSerializer):#bunu sor
             return obj.banner.url
         except Exception:
             return None
+
+    def get_online_status(self, obj):
+        if not obj.last_seen:
+            return False
+        from django.utils import timezone
+        return (timezone.now() - obj.last_seen).total_seconds() < PRESENCE_TIMEOUT
 
     class Meta:
         model = User

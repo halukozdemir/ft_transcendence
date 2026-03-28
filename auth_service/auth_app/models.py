@@ -14,6 +14,7 @@ class User(AbstractUser):
         blank=True
     )
     online_status = models.BooleanField(default=False)
+    last_seen = models.DateTimeField(null=True, blank=True)
     intra_id = models.IntegerField(
         unique=True,
         null=True,

@@ -322,13 +322,19 @@ class AllUsersView(APIView):
         
         users = users[:limit]
         
+        from django.utils import timezone
+        from datetime import timedelta
+        now = timezone.now()
+        threshold = timedelta(seconds=5)
+
         result = []
         for user in users:
+            is_online = user.last_seen and (now - user.last_seen) < threshold
             result.append({
                 'id': user.id,
                 'username': user.username,
                 'avatar': user.avatar.url if user.avatar else None,
-                'online_status': user.online_status,
+                'online_status': bool(is_online),
                 'is_friend': request.user.friends.filter(id=user.id).exists(),
             })
         
@@ -405,6 +411,18 @@ class RemoveFriendView(APIView):
             status=status.HTTP_204_NO_CONTENT
         )
     
+# ──────────────── Presence ────────────────
+class PresenceView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        from django.utils import timezone
+        request.user.online_status = True
+        request.user.last_seen = timezone.now()
+        request.user.save(update_fields=['online_status', 'last_seen'])
+        return Response({'online_status': True})
+
+
 class FriendListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = UserSerializer
