@@ -49,6 +49,7 @@ function transformState(raw: any): GameState {
         requestedPlayerIds: Array.isArray(raw.match?.rematch?.requestedPlayerIds)
           ? raw.match.rematch.requestedPlayerIds.map(String)
           : [],
+        timeoutRemainingSeconds: raw.match?.rematch?.timeoutRemainingSeconds ?? null,
       },
     },
     room: {

@@ -33,6 +33,7 @@ export interface MatchState {
     acceptedCount: number;
     requiredCount: number;
     requestedPlayerIds: string[];
+    timeoutRemainingSeconds: number | null;
   };
 }
 

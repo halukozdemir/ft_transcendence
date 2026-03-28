@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { useLocation } from "react-router";
+import { useMemo, useCallback } from "react";
+import { useLocation, useNavigate } from "react-router";
 import Chat from "../../components/game/Chat";
 import GameScreen from "../../components/game/Screen";
 import DebugPanel from "../../components/game/DebugPanel";
@@ -9,6 +9,7 @@ import { useAuth } from "../../context/authContext";
 
 const GameLayout = () => {
 	const location = useLocation();
+	const navigate = useNavigate();
 	const { accessToken, user } = useAuth();
 
 	const roomId = useMemo(() => {
@@ -28,6 +29,11 @@ const GameLayout = () => {
 	});
 	useGameInput(socket);
 
+	const handleLeaveRoom = useCallback(() => {
+		socket.current?.disconnect();
+		navigate("/");
+	}, [socket, navigate]);
+
 	return (
 		<div className="w-full h-screen flex justify-center bg-bg">
 			<div className="flex flex-col lg:relative w-full max-w-[1080px] h-full p-2 gap-2 lg:gap-0">
@@ -42,6 +48,7 @@ const GameLayout = () => {
 						myPlayerId={myPlayerId}
 						connected={connected}
 						onRematch={requestRematch}
+						onLeaveRoom={handleLeaveRoom}
 					/>
 				</div>
 				<div className="shrink-0 w-full lg:absolute lg:left-2 lg:bottom-2 lg:w-80">

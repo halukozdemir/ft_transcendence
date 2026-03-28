@@ -36,6 +36,10 @@ class GameRoom {
             disconnectedTeam: null,
         }
         this.rematchRequests = new Set()
+        this.rematchTimeout = null
+        this.rematchTimeoutDuration = 30000 // 30 seconds in milliseconds
+        this.rematchTimeoutStartedAt = null
+        this.onRematchTimeout = typeof options.onRematchTimeout === "function" ? options.onRematchTimeout : null
 
         const requestedTitle = typeof options.title === "string" ? options.title.trim() : ""
         this.title = requestedTitle.length > 0 ? requestedTitle : "Quick Match"
@@ -256,6 +260,14 @@ class GameRoom {
         }
     }
 
+    clearRematchTimeout() {
+        if (this.rematchTimeout) {
+            clearTimeout(this.rematchTimeout)
+            this.rematchTimeout = null
+            this.rematchTimeoutStartedAt = null
+        }
+    }
+
     getRematchAcceptedCount() {
         return Object.keys(this.players).reduce((count, socketId) => {
             const clientId = this.socketToClient[socketId]
@@ -271,15 +283,40 @@ class GameRoom {
         })
     }
 
+    handleRematchTimeout() {
+        this.rematchTimeout = null
+        this.rematchTimeoutStartedAt = null
+        
+        // Remove all players when timeout expires - oylama iptal
+        const allPlayerSocketIds = Object.keys(this.players)
+        allPlayerSocketIds.forEach((socketId) => {
+            this.removePlayer(socketId)
+        })
+        
+        // Call callback if provided
+        if (this.onRematchTimeout) {
+            this.onRematchTimeout()
+        }
+    }
+
     getRematchSnapshot() {
+        let timeoutRemainingSeconds = null
+        if (this.rematchTimeout && this.rematchTimeoutStartedAt) {
+            const elapsed = Date.now() - this.rematchTimeoutStartedAt
+            const remaining = Math.max(0, this.rematchTimeoutDuration - elapsed)
+            timeoutRemainingSeconds = Math.ceil(remaining / 1000)
+        }
+        
         return {
             acceptedCount: this.getRematchAcceptedCount(),
             requiredCount: this.playerCount,
             requestedPlayerIds: this.getRematchRequestedPlayerIds(),
+            timeoutRemainingSeconds,
         }
     }
 
     resetForRematch() {
+        this.clearRematchTimeout()
         this.match.status = "waiting"
         this.match.startedAt = null
         this.match.endedAt = null
@@ -316,8 +353,17 @@ class GameRoom {
         const requiredCount = this.playerCount
 
         if (requiredCount > 0 && acceptedCount >= requiredCount) {
+            this.clearRematchTimeout()
             this.resetForRematch()
             return { ok: true, started: true }
+        }
+
+        // Start timeout on first rematch request
+        if (!this.rematchTimeout) {
+            this.rematchTimeoutStartedAt = Date.now()
+            this.rematchTimeout = setTimeout(() => {
+                this.handleRematchTimeout()
+            }, this.rematchTimeoutDuration)
         }
 
         return {
@@ -542,6 +588,14 @@ class GameRoom {
         this.match.forfeitTeam = forfeitTeam
         this.match.disconnectedTeam = disconnectedTeam
         this.resetPlayersControlState()
+        
+        // Start rematch timeout immediately when match finishes
+        if (!this.rematchTimeout && this.playerCount > 0) {
+            this.rematchTimeoutStartedAt = Date.now()
+            this.rematchTimeout = setTimeout(() => {
+                this.handleRematchTimeout()
+            }, this.rematchTimeoutDuration)
+        }
     }
 
     getTimeRemainingSeconds() {

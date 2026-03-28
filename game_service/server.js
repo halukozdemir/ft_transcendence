@@ -210,6 +210,20 @@ app.post("/api/game/rooms/:roomId/validate-password/", (req, res) => {
   return res.json({ valid, requiresPassword: true });
 });
 
+function handleRematchTimeout(roomId) {
+  const room = rooms.get(roomId);
+  if (room) {
+    // Disconnect all remaining sockets in the room
+    const sockets = io.sockets.sockets;
+    for (const [socketId, socket] of sockets) {
+      if (socketRoom.get(socketId) === roomId) {
+        socket.disconnect(true);
+      }
+    }
+    console.log(`Rematch timeout: odadaki oyuncular lobiye atıldı. Room: ${roomId}`);
+  }
+}
+
 function createRoom(options = {}) {
   const roomId = `room_${++roomCounter}`;
   const room = new GameRoom({
@@ -221,6 +235,7 @@ function createRoom(options = {}) {
     title: options.title,
     isLocked: Boolean(options.isLocked),
     password: typeof options.password === "string" ? options.password : "",
+    onRematchTimeout: () => handleRematchTimeout(roomId),
   });
   room.id = roomId;
   rooms.set(roomId, room);
@@ -354,6 +369,9 @@ io.on("connection", (socket) => {
 
     r.requestRematch(socket.id);
     io.to(roomIdForSocket).emit("state", r.getState());
+    
+    // Cleanup empty room if rematch timeout kicked non-responding players
+    cleanupRoom(roomIdForSocket);
   });
 
   socket.on("debug:config", (config) => {
@@ -419,6 +437,10 @@ setInterval(() => {
 setInterval(() => {
   for (const [roomId, room] of rooms) {
     io.to(roomId).emit("state", room.getBroadcastState());
+  }
+  // Cleanup empty rooms
+  for (const roomId of rooms.keys()) {
+    cleanupRoom(roomId);
   }
 }, broadcastTickMs);
 

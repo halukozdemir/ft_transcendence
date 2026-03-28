@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import GameCanvas from "./GameCanvas";
 import Scoreboard from "./Scoreboard";
 import type { GameState } from "../../types/game";
@@ -7,9 +8,10 @@ interface Props {
   myPlayerId: string | null;
   connected?: boolean;
   onRematch?: () => void;
+  onLeaveRoom?: () => void;
 }
 
-export default function Screen({ state, myPlayerId, connected = false, onRematch }: Props) {
+export default function Screen({ state, myPlayerId, connected = false, onRematch, onLeaveRoom }: Props) {
   const myTeam = state?.players.find((p) => p.id === myPlayerId)?.team;
   const isFinished = state?.match.status === "finished";
   const winnerTeam = state?.match.winnerTeam;
@@ -31,6 +33,32 @@ export default function Screen({ state, myPlayerId, connected = false, onRematch
       : "Mavi Takım Kazandı";
 
   const iWon = Boolean(myTeam && winnerTeam && myTeam === winnerTeam);
+
+  // Countdown timer for rematch timeout
+  const [countdown, setCountdown] = useState<number | null>(null);
+
+  useEffect(() => {
+    const timeout = state?.match.rematch.timeoutRemainingSeconds;
+    if (timeout && timeout > 0) {
+      setCountdown(timeout);
+      const interval = setInterval(() => {
+        setCountdown((prev) => (prev && prev > 0 ? prev - 1 : null));
+      }, 1000);
+      return () => clearInterval(interval);
+    } else {
+      setCountdown(null);
+    }
+  }, [state?.match.rematch.timeoutRemainingSeconds]);
+
+  // Auto-leave room when rematch timeout expires
+  useEffect(() => {
+    if (countdown === 0) {
+      const timer = setTimeout(() => {
+        onLeaveRoom?.();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [countdown, onLeaveRoom]);
 
   return (
     <div className="w-full h-full bg-bg overflow-hidden rounded-xl p-2 gap-2"
@@ -62,6 +90,19 @@ export default function Screen({ state, myPlayerId, connected = false, onRematch
 
       {/* ── Canvas ── */}
       <div className="relative overflow-hidden">
+        {/* Leave button - top right during gameplay */}
+        {state && !isWaitingForOpponent && !isFinished && (
+          <div className="absolute top-2 right-2 z-[5]">
+            <button
+              type="button"
+              onClick={onLeaveRoom}
+              className="rounded-lg border border-red-500/40 bg-red-500/15 px-3 py-1.5 text-xs font-semibold text-red-300 transition hover:bg-red-500/25"
+            >
+              Odadan Çık
+            </button>
+          </div>
+        )}
+        
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="h-full aspect-12/7 max-w-full rounded-xl overflow-hidden">
             <GameCanvas state={state} myPlayerId={myPlayerId} />
@@ -76,6 +117,13 @@ export default function Screen({ state, myPlayerId, connected = false, onRematch
               <p className="mt-2 text-sm text-white/80">
                 {missingTeamLabel} takımından en az 1 oyuncu bağlanınca maç yeniden başlayacak.
               </p>
+              <button
+                type="button"
+                onClick={onLeaveRoom}
+                className="mt-4 w-full rounded-xl border border-red-500/40 bg-red-500/15 px-4 py-2 text-sm font-semibold text-red-300 transition hover:bg-red-500/25"
+              >
+                Odadan Çık
+              </button>
             </div>
           </div>
         )}
@@ -92,17 +140,35 @@ export default function Screen({ state, myPlayerId, connected = false, onRematch
               </p>
 
               <div className="mt-4 rounded-xl border border-border bg-bg/60 px-3 py-2 text-xs text-white/80">
-                Rematch: <span className="font-semibold text-white">{state.match.rematch.acceptedCount}/{state.match.rematch.requiredCount}</span>
+                <div className="flex items-center justify-between">
+                  <div>
+                    Rematch: <span className="font-semibold text-white">{state.match.rematch.acceptedCount}/{state.match.rematch.requiredCount}</span>
+                  </div>
+                  {countdown !== null && (
+                    <div className={`font-semibold ${countdown <= 10 ? "text-red-400" : "text-yellow-300"}`}>
+                      {countdown}s
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <button
-                type="button"
-                onClick={onRematch}
-                disabled={!connected || rematchAccepted}
-                className="mt-4 w-full rounded-xl border border-system/40 bg-system/15 px-4 py-2 text-sm font-semibold text-system transition hover:bg-system/25 disabled:cursor-not-allowed disabled:border-border disabled:bg-bg/40 disabled:text-white/40"
-              >
-                {!connected ? "Bağlantı bekleniyor" : rematchAccepted ? "Rematch onayın alındı" : "Rematch iste"}
-              </button>
+              <div className="flex gap-2 mt-4">
+                <button
+                  type="button"
+                  onClick={onRematch}
+                  disabled={!connected || rematchAccepted}
+                  className="flex-1 rounded-xl border border-system/40 bg-system/15 px-4 py-2 text-sm font-semibold text-system transition hover:bg-system/25 disabled:cursor-not-allowed disabled:border-border disabled:bg-bg/40 disabled:text-white/40"
+                >
+                  {!connected ? "Bağlantı bekleniyor" : rematchAccepted ? "Rematch onayın alındı" : "Rematch iste"}
+                </button>
+                <button
+                  type="button"
+                  onClick={onLeaveRoom}
+                  className="flex-1 rounded-xl border border-red-500/40 bg-red-500/15 px-4 py-2 text-sm font-semibold text-red-300 transition hover:bg-red-500/25"
+                >
+                  Odadan Çık
+                </button>
+              </div>
             </div>
           </div>
         )}
