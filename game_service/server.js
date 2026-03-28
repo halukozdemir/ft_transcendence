@@ -17,10 +17,15 @@ const maxPlayersPerTeam = Math.max(minPlayersPerTeam, Number(process.env.GAME_MA
 const simulationFps = Number(process.env.GAME_SIMULATION_FPS) || 60;
 const broadcastFps = Number(process.env.GAME_BROADCAST_FPS) || 30;
 const emptyRoomGraceRaw = Number(process.env.GAME_EMPTY_ROOM_GRACE_MS);
-const DEFAULT_EMPTY_ROOM_GRACE_MS = 60_000;
+const usedEmptyRoomGraceRaw = Number(process.env.GAME_EMPTY_USED_ROOM_GRACE_MS);
+const DEFAULT_EMPTY_ROOM_GRACE_MS = 10_000;
+const DEFAULT_USED_EMPTY_ROOM_GRACE_MS = 3_000;
 const emptyRoomGraceMs = Number.isFinite(emptyRoomGraceRaw) && emptyRoomGraceRaw > 0
   ? emptyRoomGraceRaw
   : DEFAULT_EMPTY_ROOM_GRACE_MS;
+const usedEmptyRoomGraceMs = Number.isFinite(usedEmptyRoomGraceRaw) && usedEmptyRoomGraceRaw >= 0
+  ? usedEmptyRoomGraceRaw
+  : DEFAULT_USED_EMPTY_ROOM_GRACE_MS;
 const JWT_SECRET = process.env.JWT_SECRET_KEY || process.env.JWT_SECRET || "dev-secret-key";
 
 // Health check
@@ -244,6 +249,7 @@ function createRoom(options = {}) {
   });
   room.id = roomId;
   room.emptySince = Date.now();
+  room.hasSeenPlayers = false;
   rooms.set(roomId, room);
   console.log(`Oda olusturuldu: ${roomId}`);
   return room;
@@ -273,8 +279,9 @@ function cleanupRoom(roomId) {
 
   const now = Date.now();
   room.emptySince = room.emptySince || now;
+  const graceMs = room.hasSeenPlayers ? usedEmptyRoomGraceMs : emptyRoomGraceMs;
 
-  if (now - room.emptySince >= emptyRoomGraceMs) {
+  if (now - room.emptySince >= graceMs) {
     rooms.delete(roomId);
     console.log(`Oda silindi: ${roomId}`);
   }
@@ -343,6 +350,7 @@ io.on("connection", (socket) => {
   }
 
   const roomId = room.id;
+  room.hasSeenPlayers = true;
   room.emptySince = null;
   socketRoom.set(socket.id, roomId);
   socket.join(roomId);
