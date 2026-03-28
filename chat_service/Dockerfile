@@ -21,6 +21,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy project
 COPY . .
 
+# Normalize shell script line endings for Linux containers.
+RUN sed -i 's/\r$//' /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+
 # Create non-root user
 RUN addgroup --system app && \
     adduser --system --ingroup app app && \

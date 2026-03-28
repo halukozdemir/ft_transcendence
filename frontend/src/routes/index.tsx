@@ -9,6 +9,7 @@ import ReplaysPage from "../pages/Replays";
 import SettingsPage from "../pages/Settings";
 import TermsPage from "../pages/Terms";
 import PrivacyPage from "../pages/Privacy";
+import OAuthCallbackPage from "../pages/OAuthCallback";
 import ProtectedRoute from "../components/auth/ProtectedRoute";
 
 const withLayout = (element: React.ReactNode) => (
@@ -21,6 +22,10 @@ const router = createBrowserRouter([
   {
     path: "/auth",
     element: <AuthPage />,
+  },
+  {
+    path: "/oauth/callback",
+    element: <OAuthCallbackPage />,
   },
   {
     path: "/",
