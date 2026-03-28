@@ -1,5 +1,6 @@
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
+from .moderation import moderate_text
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
@@ -28,6 +29,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
         if not message:
             return
 
+        result = await moderate_text(message)
+        moderated = result['flagged']
+        message = result['censored'] if moderated else message
+
         await self.channel_layer.group_send(
             self.room_group_name,
             {
@@ -35,6 +40,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 'message': message,
                 'sender': sender,
                 'timestamp': timestamp,
+                'moderated': moderated,
             }
         )
 
@@ -43,4 +49,5 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'message': event['message'],
             'sender': event.get('sender', 'anonymous'),
             'timestamp': event.get('timestamp', ''),
+            'moderated': event.get('moderated', False),
         }))

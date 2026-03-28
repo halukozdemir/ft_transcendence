@@ -142,3 +142,6 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'auth_app.User'
+
+# ---------- AI Service ----------
+AI_SERVICE_URL = os.environ.get('AI_SERVICE_URL', 'http://ai_service:8002/api/ai')

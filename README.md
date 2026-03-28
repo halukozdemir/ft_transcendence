@@ -216,6 +216,115 @@ Limit asildiginda `429 Too Many Requests` + `Retry-After` header donulur.
 
 ---
 
+## AI Service
+
+Icerik moderasyonu icin FastAPI tabanli AI servisi. Docker internal network uzerinden diger servislerden erisilebilir.
+
+### Endpoint'ler
+
+| Method | Endpoint | Aciklama |
+|--------|----------|----------|
+| **GET** | `/api/ai/health` | Servis sagligi |
+| **POST** | `/api/ai/moderate/text` | Metin kufur filtreleme |
+| **POST** | `/api/ai/moderate/image` | Gorsel NSFW tespiti |
+
+### Metin Moderasyonu
+
+**Kufur filtreleme** — `better_profanity` kutuphanesi + ozel Turkce kelime listesi.
+
+```bash
+curl -X POST https://localhost/api/ai/moderate/text \
+  -H "Content-Type: application/json" \
+  -d '{"text": "ornek mesaj"}'
+```
+
+**Response:**
+```json
+{
+  "flagged": false,
+  "original": "ornek mesaj",
+  "censored": "ornek mesaj"
+}
+```
+
+Kufur tespit edilirse `flagged: true` doner ve `censored` alaninda sansurlu hali bulunur.
+
+Desteklenen diller:
+- **Ingilizce**: Dahili sozluk (~1600 kelime, leetspeak varyasyonlari dahil)
+- **Turkce**: Ozel `wordlists/tr_profanity.txt` dosyasi (~130 kelime)
+
+### Gorsel Moderasyonu
+
+**NSFW tespiti** — `Falconsai/nsfw_image_detection` modeli (Vision Transformer).
+
+```bash
+curl -X POST https://localhost/api/ai/moderate/image \
+  -F "file=@resim.jpg"
+```
+
+**Response:**
+```json
+{
+  "safe": true,
+  "nsfw_score": 0.03,
+  "normal_score": 0.97,
+  "label": "normal"
+}
+```
+
+`nsfw_score >= 0.7` ise `safe: false` ve `label: "nsfw"` doner.
+
+---
+
+## Test Suite
+
+### Auth Service Testleri
+
+```bash
+# Tum auth testlerini calistir
+make test
+
+# Belirli bir test dosyasi
+make test-auth T=test_login
+```
+
+Mevcut test dosyalari (`auth_service/auth_app/tests/`):
+
+| Dosya | Kapsam |
+|-------|--------|
+| `test_register.py` | Kullanici kaydi, validasyon, duplicate kontrol |
+| `test_login.py` | Giris, yanlis sifre, JWT token |
+| `test_logout.py` | Cikis, token blacklist |
+| `test_profile.py` | Profil goruntuleme, guncelleme |
+| `test_password.py` | Sifre degistirme, validasyon |
+| `test_friends.py` | Arkadas ekleme, cikarma, listeleme |
+
+### AI Service Testleri
+
+```bash
+# Container icinden calistir
+docker-compose exec ai_service pytest -v
+
+# Sadece metin moderasyonu
+docker-compose exec ai_service pytest tests/test_moderation.py -v
+
+# Sadece gorsel moderasyonu
+docker-compose exec ai_service pytest tests/test_image.py -v
+
+# Sadece API endpoint'leri
+docker-compose exec ai_service pytest tests/test_api.py -v
+```
+
+AI test dosyalari (`ai_service/tests/`):
+
+| Dosya | Test Sayisi | Kapsam |
+|-------|-------------|--------|
+| `test_moderation.py` | 15 | Turkce kufur tespiti, Ingilizce kufur tespiti, temiz metin, sansur dogrulugu, edge case'ler (bos string, None, uzun metin) |
+| `test_image.py` | 5 | Normal resim safe doner, response format kontrolu, nsfw_score araligi, gecersiz dosya, bos dosya |
+| `test_api.py` | 6 | GET /health, POST /moderate/text (temiz + kufur), POST /moderate/image (gecerli + dosyasiz), 422 validation hatalari |
+
+---
+
 ## Veritabani Yapisi
 
 Tek PostgreSQL instance, tek `ft_transcendence` veritabani:

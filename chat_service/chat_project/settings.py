@@ -94,3 +94,6 @@ STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# ---------- AI Service ----------
+AI_SERVICE_URL = os.environ.get('AI_SERVICE_URL', 'http://ai_service:8002/api/ai')
