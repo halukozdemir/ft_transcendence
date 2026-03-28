@@ -417,14 +417,19 @@ class OAuth42CallbackView(APIView):
         user = User.objects.filter(intra_id=intra_id).first()
 
         if not user:
-            user = User.objects.create_user(
-                username=username,
-                email=email,
-                intra_id=intra_id,
-                password=None,
-            )
-            # Create PlayerStats for OAuth user
-            PlayerStats.objects.get_or_create(user=user)
+            user = User.objects.filter(username=username).first()
+
+            if user:
+                user.intra_id = intra_id
+                user.save(update_fields=['intra_id'])
+            else:
+                user = User.objects.create_user(
+                    username=username,
+                    email=email,
+                    intra_id=intra_id,
+                    password=None,
+                )
+                PlayerStats.objects.get_or_create(user=user)
 
         user.online_status = True
         user.save(update_fields=['online_status'])
