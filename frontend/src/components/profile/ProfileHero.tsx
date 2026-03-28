@@ -11,9 +11,10 @@ interface ProfileHeroData {
 interface ProfileHeroProps {
   profile: ProfileHeroData;
   onAddFriend?: () => void;
+  isOwnProfile?: boolean;
 }
 
-const ProfileHero = ({ profile, onAddFriend }: ProfileHeroProps) => {
+const ProfileHero = ({ profile, onAddFriend, isOwnProfile }: ProfileHeroProps) => {
   return (
     <section className="relative mb-8">
       <div className="h-64 sm:h-80 w-full rounded-2xl overflow-hidden relative group">
@@ -48,14 +49,16 @@ const ProfileHero = ({ profile, onAddFriend }: ProfileHeroProps) => {
             </div>
           </div>
           <div className="flex gap-3 w-full sm:w-auto">
-            <button
-              className="cursor-pointer flex-1 sm:flex-none px-6 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/10 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2"
-              onClick={onAddFriend}
-              type="button"
-            >
-              <span className="material-symbols-outlined text-lg">person_add</span>
-              Arkadaş Ekle
-            </button>
+            {!isOwnProfile && (
+              <button
+                className="cursor-pointer flex-1 sm:flex-none px-6 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/10 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2"
+                onClick={onAddFriend}
+                type="button"
+              >
+                <span className="material-symbols-outlined text-lg">person_add</span>
+                Arkadaş Ekle
+              </button>
+            )}
           </div>
         </div>
       </div>

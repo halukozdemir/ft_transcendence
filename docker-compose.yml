@@ -13,8 +13,8 @@ services:
       dockerfile: Dockerfile
     container_name: ft_gateway
     ports:
-      - "80:80"
-      - "443:443"
+      - "${GATEWAY_HTTP_PORT:-8080}:80"
+      - "${GATEWAY_HTTPS_PORT:-8443}:443"
     volumes:
       - ./ssl:/etc/nginx/ssl:ro
       - user_avatars:/var/www/media:ro
@@ -48,7 +48,7 @@ services:
     entrypoint: ["/bin/bash", "/app/entrypoint.sh"]
     command: ["gunicorn", "auth_project.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "120"]
     volumes:
-      - user_avatars:/app/media/avatars
+      - user_avatars:/app/media
     env_file:
       - .env
     depends_on:

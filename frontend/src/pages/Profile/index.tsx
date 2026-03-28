@@ -30,6 +30,7 @@ const ProfilePage = () => {
   return (
     <div className="px-4 py-8 md:px-6">
       <ProfileHero
+        isOwnProfile={true}
         onAddFriend={handleAddFriend}
         profile={profileData}
       />

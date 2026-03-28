@@ -6,6 +6,7 @@ import ProfileDrawer from "./ProfileDrawer";
 
 const NAV_LINKS = [
   { label: "Lobi",        path: "/"            },
+  { label: "Arkadaşlar",  path: "/friends"     },
   { label: "Liderlik Tablosu", path: "/leaderboard" },
 ];
 

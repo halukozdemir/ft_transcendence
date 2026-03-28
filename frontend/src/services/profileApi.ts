@@ -6,10 +6,9 @@
 export interface Friend {
   id: number;
   username: string;
-  email: string;
   avatar: string;
   online_status: boolean;
-  is_online: boolean;
+  is_friend?: boolean;
 }
 
 export interface BlockedUser {
@@ -66,6 +65,21 @@ export interface UserProfile {
 const API_BASE_URL = "/api/auth";
 
 export const profileApi = {
+  // Get all users (for friends discovery)
+  getAllUsers: async (accessToken: string, search?: string, limit?: number): Promise<Friend[]> => {
+    let url = `${API_BASE_URL}/users/`;
+    const params = new URLSearchParams();
+    if (search) params.append("search", search);
+    if (limit) params.append("limit", limit.toString());
+    if (params.toString()) url += `?${params.toString()}`;
+
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) throw new Error(`Get all users failed: ${res.statusText}`);
+    return res.json();
+  },
+
   // Get user profile (same as authApi, but included here for convenience)
   getProfile: async (accessToken: string): Promise<UserProfile> => {
     const res = await fetch(`${API_BASE_URL}/profile/`, {
@@ -178,13 +192,12 @@ export const profileApi = {
 
   // Remove friend
   removeFriend: async (friendUserId: number, accessToken: string): Promise<{ removed: boolean }> => {
-    const res = await fetch(`${API_BASE_URL}/friends/remove/`, {
-      method: "POST",
+    const res = await fetch(`${API_BASE_URL}/friends/${friendUserId}/`, {
+      method: "DELETE",
       headers: {
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ user_id: friendUserId }),
     });
     if (!res.ok) throw new Error(`Remove friend failed: ${res.statusText}`);
     return res.json();

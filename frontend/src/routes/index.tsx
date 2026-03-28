@@ -3,6 +3,7 @@ import MainLayout from "../layouts/Main";
 import GameLayout from "../layouts/Game";
 import DashboardPage from "../pages/Dashboard";
 import ProfilePage from "../pages/Profile";
+import FriendsPage from "../pages/Friends";
 import AuthPage from "../pages/Auth";
 import LeaderboardPage from "../pages/Leaderboard";
 import ReplaysPage from "../pages/Replays";
@@ -34,6 +35,10 @@ const router = createBrowserRouter([
   {
     path: "/profile",
     element: withLayout(<ProfilePage />),
+  },
+  {
+    path: "/friends",
+    element: withLayout(<FriendsPage />),
   },
   {
     path: "/game",

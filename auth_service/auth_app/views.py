@@ -293,6 +293,35 @@ class LeaderboardView(APIView):
         
         return Response(result)
 
+# ──────────────── All Users (for friends search) ────────────────
+class AllUsersView(APIView):
+    """Get all users for friends search/discovery"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        search = request.query_params.get('search', '').strip()
+        limit = int(request.query_params.get('limit', 50))
+        
+        # Exclude current user
+        users = User.objects.exclude(id=request.user.id)
+        
+        if search:
+            users = users.filter(username__icontains=search)
+        
+        users = users[:limit]
+        
+        result = []
+        for user in users:
+            result.append({
+                'id': user.id,
+                'username': user.username,
+                'avatar': user.avatar.url if user.avatar else None,
+                'online_status': user.online_status,
+                'is_friend': request.user.friends.filter(id=user.id).exists(),
+            })
+        
+        return Response(result)
+
 # ──────────────── Password Change ────────────────
 class PasswordChangeView(APIView):
     permission_classes = [permissions.IsAuthenticated]
