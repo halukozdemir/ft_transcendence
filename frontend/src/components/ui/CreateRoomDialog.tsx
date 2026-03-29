@@ -148,6 +148,7 @@ const CreateRoomDialog = ({ open, onClose, onCreate }: CreateRoomDialogProps) =>
                 <label className={labelClass}>Şifre</label>
                 <input
                   className={inputClass}
+                  autoComplete="new-password"
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   type="password"

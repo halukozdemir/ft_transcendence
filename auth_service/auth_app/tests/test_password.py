@@ -33,6 +33,17 @@ class PasswordChangeTests(TestCase):
         self.user.refresh_from_db()
         self.assertTrue(self.user.check_password('NewPass5678'))
 
+    def test_password_change_success_post_alias(self):
+        data = {
+            'old_password': 'OldPass1234',
+            'new_password': 'NewPass5678',
+            'new_password2': 'NewPass5678',
+        }
+        res = self.client.post(self.url, data, format='json')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('NewPass5678'))
+
     def test_password_change_wrong_old(self):
         data = {
             'old_password': 'WrongOld',

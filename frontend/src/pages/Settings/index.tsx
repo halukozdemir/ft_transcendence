@@ -204,52 +204,70 @@ const SettingsPage = () => {
       {/* Şifre */}
       <section className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-5">
         <h2 className="text-base font-bold text-white">Şifre Değiştir</h2>
-
-        <div>
-          <label className={labelClass}>Mevcut Şifre</label>
-          <input
-            className={inputClass}
-            onChange={(e) => setOldPassword(e.target.value)}
-            placeholder="••••••••"
-            type="password"
-            value={oldPassword}
-          />
-        </div>
-        <div>
-          <label className={labelClass}>Yeni Şifre</label>
-          <input
-            className={inputClass}
-            onChange={(e) => setNewPassword(e.target.value)}
-            placeholder="••••••••"
-            type="password"
-            value={newPassword}
-          />
-        </div>
-        <div>
-          <label className={labelClass}>Yeni Şifre Tekrar</label>
-          <input
-            className={inputClass}
-            onChange={(e) => setNewPassword2(e.target.value)}
-            placeholder="••••••••"
-            type="password"
-            value={newPassword2}
-          />
-        </div>
-
-        {passwordMsg && (
-          <p className={`text-sm ${passwordMsg.type === "ok" ? "text-green-400" : "text-red-400"}`}>
-            {passwordMsg.text}
-          </p>
-        )}
-
-        <button
-          className="cursor-pointer rounded-lg bg-(--dashboard-primary) hover:bg-(--dashboard-primary)/90 px-5 py-2.5 text-sm font-bold text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={passwordLoading}
-          onClick={handlePasswordChange}
-          type="button"
+        <form
+          className="space-y-5"
+          onSubmit={(e) => {
+            e.preventDefault();
+            handlePasswordChange();
+          }}
         >
-          {passwordLoading ? "Değiştiriliyor..." : "Şifreyi Değiştir"}
-        </button>
+          <input
+            aria-hidden="true"
+            autoComplete="username"
+            className="sr-only"
+            readOnly
+            tabIndex={-1}
+            type="text"
+            value={user?.username || ""}
+          />
+          <div>
+            <label className={labelClass}>Mevcut Şifre</label>
+            <input
+              className={inputClass}
+              autoComplete="current-password"
+              onChange={(e) => setOldPassword(e.target.value)}
+              placeholder="••••••••"
+              type="password"
+              value={oldPassword}
+            />
+          </div>
+          <div>
+            <label className={labelClass}>Yeni Şifre</label>
+            <input
+              className={inputClass}
+              autoComplete="new-password"
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="••••••••"
+              type="password"
+              value={newPassword}
+            />
+          </div>
+          <div>
+            <label className={labelClass}>Yeni Şifre Tekrar</label>
+            <input
+              className={inputClass}
+              autoComplete="new-password"
+              onChange={(e) => setNewPassword2(e.target.value)}
+              placeholder="••••••••"
+              type="password"
+              value={newPassword2}
+            />
+          </div>
+
+          {passwordMsg && (
+            <p className={`text-sm ${passwordMsg.type === "ok" ? "text-green-400" : "text-red-400"}`}>
+              {passwordMsg.text}
+            </p>
+          )}
+
+          <button
+            className="cursor-pointer rounded-lg bg-(--dashboard-primary) hover:bg-(--dashboard-primary)/90 px-5 py-2.5 text-sm font-bold text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={passwordLoading}
+            type="submit"
+          >
+            {passwordLoading ? "Değiştiriliyor..." : "Şifreyi Değiştir"}
+          </button>
+        </form>
       </section>
 
       {/* Hesap Silme */}
@@ -268,11 +286,27 @@ const SettingsPage = () => {
             Hesabımı Sil
           </button>
         ) : (
-          <div className="space-y-4">
+          <form
+            className="space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleDeleteAccount();
+            }}
+          >
+            <input
+              aria-hidden="true"
+              autoComplete="username"
+              className="sr-only"
+              readOnly
+              tabIndex={-1}
+              type="text"
+              value={user?.username || ""}
+            />
             <div>
               <label className={labelClass + " text-red-400"}>Onaylamak için şifrenizi girin</label>
               <input
                 className={inputClass + " border-red-500/30 focus:border-red-500"}
+                autoComplete="current-password"
                 onChange={(e) => setDeletePassword(e.target.value)}
                 placeholder="••••••••"
                 type="password"
@@ -288,8 +322,7 @@ const SettingsPage = () => {
               <button
                 className="cursor-pointer rounded-lg bg-red-500 hover:bg-red-600 px-5 py-2.5 text-sm font-bold text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={deleteLoading}
-                onClick={handleDeleteAccount}
-                type="button"
+                type="submit"
               >
                 {deleteLoading ? "Siliniyor..." : "Kalıcı Olarak Sil"}
               </button>
@@ -301,7 +334,7 @@ const SettingsPage = () => {
                 Vazgeç
               </button>
             </div>
-          </div>
+          </form>
         )}
       </section>
     </div>

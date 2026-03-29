@@ -21,6 +21,7 @@ from .serializers import(
     BannerSerializer,
     FriendRequestSerializer,
     PasswordChangeSerializer,
+    DeleteAccountSerializer,
 )
 from .models import PlayerStats, MatchRecord, MatchPlayer, Achievement, UserAchievement
 
@@ -138,27 +139,20 @@ class LoginView(APIView):
     
 # ──────────────── Logout ────────────────
 class LogoutView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
-    @extend_schema(
-        tags=['Auth'],
-        summary='Logout user',
-        description='Blacklists the provided refresh token and sets user status to offline.',
-        request=inline_serializer('LogoutRequest', fields={
-            'refresh': s.CharField(help_text='Refresh token to blacklist'),
-        }),
-        responses={205: None},
-    )
+    permission_classes = [permissions.AllowAny]
+    
     def post(self, request):
         try:
             refresh_token = request.data.get('refresh')
-            token = RefreshToken(refresh_token)
-            token.blacklist()
+            if refresh_token:
+                token = RefreshToken(refresh_token)
+                token.blacklist()
         except Exception:
             pass
 
-        request.user.online_status = False
-        request.user.save(update_fields=['online_status'])
+        if getattr(request, 'user', None) and request.user.is_authenticated:
+            request.user.online_status = False
+            request.user.save(update_fields=['online_status'])
         return Response(status=status.HTTP_205_RESET_CONTENT)
 
 # ──────────────── Profile ────────────────
@@ -527,6 +521,49 @@ class PasswordChangeView(APIView):
         )
         request.user.save()
         return Response({'detail': 'Password updated.'})
+
+    @extend_schema(
+        tags=['Auth'],
+        summary='Change password (POST alias)',
+        description='Alias of PUT /password/change/.',
+        request=PasswordChangeSerializer,
+        responses={200: inline_serializer('PasswordChangePostResponse', fields={
+            'detail': s.CharField(),
+        })},
+    )
+    def post(self, request):
+        return self.put(request)
+
+
+# ──────────────── Delete Account ────────────────
+class DeleteAccountView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    @extend_schema(
+        tags=['Auth'],
+        summary='Delete account',
+        description='Permanently deletes the authenticated user account after password confirmation.',
+        request=DeleteAccountSerializer,
+        responses={204: OpenApiResponse(description='Account deleted.')},
+    )
+    def delete(self, request):
+        serializer = DeleteAccountSerializer(
+            data=request.data,
+            context={'request': request}
+        )
+        serializer.is_valid(raise_exception=True)
+        request.user.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @extend_schema(
+        tags=['Auth'],
+        summary='Delete account (POST alias)',
+        description='Alias of DELETE /delete/.',
+        request=DeleteAccountSerializer,
+        responses={204: OpenApiResponse(description='Account deleted.')},
+    )
+    def post(self, request):
+        return self.delete(request)
     
 # ──────────────── Add/Remove Friend ────────────────
 class AddFriendView(APIView):
