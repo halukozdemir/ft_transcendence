@@ -27,7 +27,7 @@ const usedEmptyRoomGraceMs = Number.isFinite(usedEmptyRoomGraceRaw) && usedEmpty
   ? usedEmptyRoomGraceRaw
   : DEFAULT_USED_EMPTY_ROOM_GRACE_MS;
 const JWT_SECRET = process.env.JWT_SECRET_KEY || process.env.JWT_SECRET || "dev-secret-key";
-const SERVICE_SECRET = process.env.SERVICE_SECRET || "";
+const SERVICE_SECRET = process.env.SERVICE_SECRET || "dev-service-secret";
 const AUTH_SERVICE_URL = "http://auth_service:8000";
 
 async function reportMatchResult(data) {

@@ -151,4 +151,4 @@ AUTH_USER_MODEL = 'auth_app.User'
 # ---------- AI Service ----------
 AI_SERVICE_URL = os.environ.get('AI_SERVICE_URL', 'http://ai_service:8002/api/ai')
 
-SERVICE_SECRET = os.environ.get('SERVICE_SECRET', '')
+SERVICE_SECRET = (os.environ.get('SERVICE_SECRET') or 'dev-service-secret').strip() or 'dev-service-secret'

@@ -4,6 +4,10 @@ export type AchievementType = "tournament" | "streak" | "verified" | "special";
 export interface PlayerStats {
   totalMatches: number;
   winPercentage: number;
+  xp?: number;
+  level?: number;
+  xpInLevel?: number;
+  xpGoal?: number;
   goalsScored: number;
   goalsPerGame: number;
   offenseRating: number;

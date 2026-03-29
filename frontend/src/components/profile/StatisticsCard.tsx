@@ -5,10 +5,32 @@ interface StatisticsCardProps {
 }
 
 const StatisticsCard = ({ stats }: StatisticsCardProps) => {
+  const xpTotal = stats.xp ?? 0;
+  const xpInLevel = stats.xpInLevel ?? (xpTotal % 100);
+  const xpGoal = stats.xpGoal ?? 100;
+  const xpPercent = Math.max(0, Math.min(100, Math.round((xpInLevel / xpGoal) * 100)));
+
   return (
     <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-sm">
       <h3 className="text-lg font-bold mb-6">Kariyer İstatistikleri</h3>
       <div className="space-y-6">
+        {/* XP */}
+        <div>
+          <div className="flex justify-between items-end mb-2">
+            <span className="text-slate-400 text-sm font-medium">Deneyim (XP)</span>
+            <span className="text-emerald-400 text-xl font-bold">{xpTotal.toLocaleString()} XP</span>
+          </div>
+          <div className="h-3 w-full bg-white/10 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-emerald-500 rounded-full shadow-[0_0_12px_rgba(16,185,129,0.45)]"
+              style={{ width: `${xpPercent}%` }}
+            ></div>
+          </div>
+          <p className="mt-2 text-xs text-slate-400">
+            Sonraki seviye: {xpInLevel}/{xpGoal} XP
+          </p>
+        </div>
+
         {/* Win Rate */}
         <div>
           <div className="flex justify-between items-end mb-2">

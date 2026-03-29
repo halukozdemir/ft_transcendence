@@ -86,6 +86,10 @@ const ProfilePage = () => {
         setStats({
           totalMatches: statsData.total_matches,
           winPercentage: Math.round(statsData.win_rate),
+          xp: statsData.xp,
+          level: statsData.level,
+          xpInLevel: statsData.xp % 100,
+          xpGoal: 100,
           goalsScored: 0,
           goalsPerGame: 0,
           offenseRating: 0,

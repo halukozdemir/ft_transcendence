@@ -537,9 +537,21 @@ class MatchResultView(APIView):
         score_red = int(data.get('score_red', 0))
         score_blue = int(data.get('score_blue', 0))
         duration_seconds = int(data.get('duration_seconds', 0))
-        red_player_ids = data.get('red_player_ids', [])
-        blue_player_ids = data.get('blue_player_ids', [])
+        red_player_ids_raw = data.get('red_player_ids', [])
+        blue_player_ids_raw = data.get('blue_player_ids', [])
         end_reason = data.get('end_reason', 'score_limit')
+
+        def _normalize_ids(raw_ids):
+            normalized = []
+            for value in raw_ids or []:
+                try:
+                    normalized.append(int(value))
+                except (TypeError, ValueError):
+                    continue
+            return normalized
+
+        red_player_ids = _normalize_ids(red_player_ids_raw)
+        blue_player_ids = _normalize_ids(blue_player_ids_raw)
 
         all_ids = red_player_ids + blue_player_ids
         users = {u.id: u for u in User.objects.filter(id__in=all_ids)}
