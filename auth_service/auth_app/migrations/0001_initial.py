@@ -58,7 +58,6 @@ class Migration(migrations.Migration):
                 ('description', models.TextField()),
                 ('icon_url', models.URLField()),
                 ('badge_type', models.CharField(choices=[('first_win', 'First Win'), ('streak_5', '5-Win Streak'), ('perfect_win', 'Perfect Win'), ('tournament_champion', 'Tournament Champion'), ('unstoppable', 'Unstoppable')], max_length=50)),
-                ('users', models.ManyToManyField(related_name='achievements', through='auth_app.UserAchievement', to=settings.AUTH_USER_MODEL)),
             ],
             options={
                 'unique_together': {('name', 'badge_type')},
@@ -128,6 +127,11 @@ class Migration(migrations.Migration):
                 'ordering': ['-unlocked_at'],
                 'unique_together': {('user', 'achievement')},
             },
+        ),
+        migrations.AddField(
+            model_name='achievement',
+            name='users',
+            field=models.ManyToManyField(related_name='achievements', through='auth_app.UserAchievement', to=settings.AUTH_USER_MODEL),
         ),
         # ── FriendRequest ──
         migrations.CreateModel(
