@@ -162,7 +162,7 @@ export const authApi = {
   // Change Password
   changePassword: async (accessToken: string, payload: { old_password: string; new_password: string; new_password2: string }): Promise<void> => {
     const res = await fetch(`${API_BASE_URL}/password/change/`, {
-      method: "POST",
+      method: "PUT",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
       body: JSON.stringify(payload),
     });

@@ -520,6 +520,18 @@ class PasswordChangeView(APIView):
         )
         request.user.save()
         return Response({'detail': 'Password updated.'})
+
+    @extend_schema(
+        tags=['Auth'],
+        summary='Change password (POST alias)',
+        description='Alias of PUT /password/change/.',
+        request=PasswordChangeSerializer,
+        responses={200: inline_serializer('PasswordChangePostResponse', fields={
+            'detail': s.CharField(),
+        })},
+    )
+    def post(self, request):
+        return self.put(request)
     
 # ──────────────── Add/Remove Friend ────────────────
 class AddFriendView(APIView):
