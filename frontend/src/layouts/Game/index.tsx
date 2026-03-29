@@ -42,6 +42,12 @@ const GameLayout = () => {
 						{joinError}
 					</div>
 				)}
+				{!connected && !joinError && (
+					<div className="shrink-0 rounded-xl border border-yellow-500/40 bg-yellow-500/10 px-3 py-2 text-sm text-yellow-200 flex items-center gap-2">
+						<span className="inline-block w-2 h-2 rounded-full bg-yellow-400 animate-pulse" />
+						Sunucuyla bağlantı kesildi. Yeniden bağlanmaya çalışılıyor...
+					</div>
+				)}
 				<div className="flex-1 min-h-0 lg:absolute lg:inset-2 rounded-xl overflow-hidden">
 					<GameScreen
 						state={state}

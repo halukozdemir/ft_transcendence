@@ -204,7 +204,9 @@ export function useGameSocket(accessToken?: string | null, options: UseGameSocke
 
     socket.on("disconnect", () => {
       setConnected(false);
-      if (options.roomId && !joinedRef.current) {
+      if (joinedRef.current) {
+        setJoinError("Bağlantı koptu. Yeniden bağlanılıyor...");
+      } else if (options.roomId) {
         setJoinError((prev: string | null) => prev || "Odaya katılamadı.");
       }
     });
