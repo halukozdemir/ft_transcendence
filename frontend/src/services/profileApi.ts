@@ -193,16 +193,14 @@ export const profileApi = {
   },
 
   // Remove friend
-  removeFriend: async (friendUserId: number, accessToken: string): Promise<{ removed: boolean }> => {
+  removeFriend: async (friendUserId: number, accessToken: string): Promise<void> => {
     const res = await fetch(`${API_BASE_URL}/friends/${friendUserId}/`, {
       method: "DELETE",
       headers: {
         Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
       },
     });
     if (!res.ok) throw new Error(`Remove friend failed: ${res.statusText}`);
-    return res.json();
   },
 
   // Block user
