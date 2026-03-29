@@ -101,18 +101,20 @@ class LoginView(APIView):
     
 # ──────────────── Logout ────────────────
 class LogoutView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
     
     def post(self, request):
         try:
             refresh_token = request.data.get('refresh')
-            token = RefreshToken(refresh_token)
-            token.blacklist()
+            if refresh_token:
+                token = RefreshToken(refresh_token)
+                token.blacklist()
         except Exception:
             pass
 
-        request.user.online_status = False
-        request.user.save(update_fields=['online_status'])
+        if getattr(request, 'user', None) and request.user.is_authenticated:
+            request.user.online_status = False
+            request.user.save(update_fields=['online_status'])
         return Response(status=status.HTTP_205_RESET_CONTENT)
 
 # ──────────────── Profile ────────────────
