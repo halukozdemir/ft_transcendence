@@ -1,6 +1,7 @@
 from django.urls import path
 from django.http import JsonResponse
 from rest_framework_simplejwt.views import TokenRefreshView
+from drf_spectacular.utils import extend_schema
 from .views import(
     RegisterView,
     LoginView,
@@ -35,7 +36,7 @@ urlpatterns = [
     path('profile/', ProfileView.as_view(), name='profile'),
     path('profile/avatar/', AvatarUploadView.as_view(), name='avatar-upload'),
     path('profile/banner/', BannerUploadView.as_view(), name='banner-upload'),
-    path('token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
+    path('token/refresh/', extend_schema(tags=['Auth'], summary='Refresh access token', description='Takes a refresh JWT and returns a new access token. The old refresh token is rotated and blacklisted.')(TokenRefreshView).as_view(), name='token-refresh'),
     path('users/', AllUsersView.as_view(), name='all-users'),
     path('users/<int:user_id>/', UserDetailView.as_view(), name="user-detail"),
     path('users/<int:user_id>/stats/', UserStatsView.as_view(), name="user-stats"),

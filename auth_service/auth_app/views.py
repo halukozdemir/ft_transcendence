@@ -9,6 +9,8 @@ from django.db.models import Q, Count, F, Case, When, IntegerField
 import requests
 from django.conf import settings
 from django.shortcuts import redirect
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiResponse, inline_serializer
+from rest_framework import serializers as s
 
 from .serializers import(
     RegisterSerializer,
@@ -40,6 +42,24 @@ def _safe_media_url(file_field):
         return None
 
 # ──────────────── Register ────────────────
+@extend_schema_view(
+    create=extend_schema(
+        tags=['Auth'],
+        summary='Register a new user',
+        description='Creates a new user account with email, username and password. Returns user info and JWT token pair.',
+        responses={201: inline_serializer('RegisterResponse', fields={
+            'user': inline_serializer('RegisterUser', fields={
+                'id': s.IntegerField(),
+                'email': s.EmailField(),
+                'username': s.CharField(),
+            }),
+            'tokens': inline_serializer('RegisterTokens', fields={
+                'access': s.CharField(),
+                'refresh': s.CharField(),
+            }),
+        })},
+    ),
+)
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
     permission_classes = [permissions.AllowAny]
@@ -68,6 +88,23 @@ class RegisterView(generics.CreateAPIView):
 class LoginView(APIView):
     permission_classes = [permissions.AllowAny]
 
+    @extend_schema(
+        tags=['Auth'],
+        summary='Authenticate user',
+        description='Validates email and password credentials. Returns user info and JWT token pair on success.',
+        request=LoginSerializer,
+        responses={200: inline_serializer('LoginResponse', fields={
+            'user': inline_serializer('LoginUser', fields={
+                'id': s.IntegerField(),
+                'email': s.EmailField(),
+                'username': s.CharField(),
+            }),
+            'tokens': inline_serializer('LoginTokens', fields={
+                'access': s.CharField(),
+                'refresh': s.CharField(),
+            }),
+        })},
+    )
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -118,7 +155,13 @@ class LogoutView(APIView):
         return Response(status=status.HTTP_205_RESET_CONTENT)
 
 # ──────────────── Profile ────────────────
+@extend_schema_view(
+    retrieve=extend_schema(tags=['Profile'], summary='Get own profile', description='Returns the authenticated user\'s full profile including friends list.'),
+    update=extend_schema(tags=['Profile'], summary='Update profile', description='Updates the authenticated user\'s profile fields (e.g. username).'),
+    partial_update=extend_schema(tags=['Profile'], summary='Partially update profile', description='Partially updates the authenticated user\'s profile.'),
+)
 class ProfileView(generics.RetrieveUpdateAPIView):
+    """Authenticated user's own profile."""
     serializer_class = ProfileSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -127,9 +170,17 @@ class ProfileView(generics.RetrieveUpdateAPIView):
     
 # ──────────────── Avatar Upload ────────────────
 class AvatarUploadView(APIView):
+    """Upload or update user avatar image. Images are checked for NSFW content."""
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [MultiPartParser]
 
+    @extend_schema(
+        tags=['Profile'],
+        summary='Upload avatar',
+        description='Upload a new avatar image (JPEG, PNG, WEBP, max 5MB). The image is scanned for NSFW content and rejected if inappropriate.',
+        request=AvatarSerializer,
+        responses={200: AvatarSerializer},
+    )
     def put(self, request):
         serializer = AvatarSerializer(
             request.user,
@@ -152,14 +203,23 @@ class AvatarUploadView(APIView):
         serializer.save()
         return Response(serializer.data)
 
+    @extend_schema(tags=['Profile'], summary='Upload avatar (POST)', description='Same as PUT. Alias for avatar upload.')
     def post(self, request):
         return self.put(request)
 
 # ──────────────── Banner Upload ────────────────
 class BannerUploadView(APIView):
+    """Upload or update user banner image."""
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [MultiPartParser]
 
+    @extend_schema(
+        tags=['Profile'],
+        summary='Upload banner',
+        description='Upload a new banner image (JPEG, PNG, WEBP, max 10MB).',
+        request=BannerSerializer,
+        responses={200: BannerSerializer},
+    )
     def put(self, request):
         serializer = BannerSerializer(
             request.user,
@@ -170,10 +230,12 @@ class BannerUploadView(APIView):
         serializer.save()
         return Response(serializer.data)
 
+    @extend_schema(tags=['Profile'], summary='Upload banner (POST)', description='Same as PUT. Alias for banner upload.')
     def post(self, request):
         return self.put(request)
-    
+
 # ──────────────── User Detail (public) ────────────────
+@extend_schema(tags=['Users'], summary='Get user by ID', description='Returns public profile of a user by their ID. No authentication required.')
 class UserDetailView(generics.RetrieveAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
@@ -185,7 +247,23 @@ class UserDetailView(generics.RetrieveAPIView):
 class UserStatsView(APIView):
     """Get player statistics"""
     permission_classes = [permissions.AllowAny]
-    
+
+    @extend_schema(
+        tags=['Stats'],
+        summary='Get player statistics',
+        description='Returns win/loss record, XP, level, and global ranking for a user.',
+        responses={200: inline_serializer('UserStatsResponse', fields={
+            'user_id': s.IntegerField(),
+            'username': s.CharField(),
+            'total_matches': s.IntegerField(),
+            'wins': s.IntegerField(),
+            'losses': s.IntegerField(),
+            'win_rate': s.FloatField(),
+            'xp': s.IntegerField(),
+            'level': s.IntegerField(),
+            'ranking': s.IntegerField(),
+        })},
+    )
     def get(self, request, user_id):
         try:
             user = User.objects.get(id=user_id)
@@ -214,6 +292,19 @@ class UserMatchHistoryView(APIView):
     """Get user's match history"""
     permission_classes = [permissions.AllowAny]
 
+    @extend_schema(
+        tags=['Stats'],
+        summary='Get match history',
+        description='Returns paginated list of matches played by the user, including scores, opponents, and results.',
+        parameters=[
+            OpenApiParameter('limit', int, description='Number of results (default 10)', required=False),
+            OpenApiParameter('offset', int, description='Offset for pagination (default 0)', required=False),
+        ],
+        responses={200: inline_serializer('MatchHistoryResponse', fields={
+            'results': s.ListField(child=s.DictField()),
+            'total': s.IntegerField(),
+        })},
+    )
     def get(self, request, user_id):
         try:
             user = User.objects.get(id=user_id)
@@ -272,7 +363,20 @@ class UserMatchHistoryView(APIView):
 class UserAchievementsView(APIView):
     """Get user's achievements"""
     permission_classes = [permissions.AllowAny]
-    
+
+    @extend_schema(
+        tags=['Stats'],
+        summary='Get user achievements',
+        description='Returns list of unlocked achievements/badges for the user.',
+        responses={200: inline_serializer('AchievementResponse', fields={
+            'id': s.IntegerField(),
+            'name': s.CharField(),
+            'description': s.CharField(),
+            'icon_url': s.CharField(),
+            'badge_type': s.CharField(),
+            'unlocked_at': s.DateTimeField(),
+        }, many=True)},
+    )
     def get(self, request, user_id):
         try:
             user = User.objects.get(id=user_id)
@@ -299,6 +403,25 @@ class LeaderboardView(APIView):
     """Get global leaderboard"""
     permission_classes = [permissions.AllowAny]
 
+    @extend_schema(
+        tags=['Leaderboard'],
+        summary='Get global leaderboard',
+        description='Returns players ranked by XP. Only users with at least one match are included.',
+        parameters=[
+            OpenApiParameter('limit', int, description='Max results (default 50)', required=False),
+        ],
+        responses={200: inline_serializer('LeaderboardEntry', fields={
+            'rank': s.IntegerField(),
+            'user_id': s.IntegerField(),
+            'username': s.CharField(),
+            'avatar': s.CharField(allow_null=True),
+            'xp': s.IntegerField(),
+            'level': s.IntegerField(),
+            'total_matches': s.IntegerField(),
+            'wins': s.IntegerField(),
+            'win_rate': s.FloatField(),
+        }, many=True)},
+    )
     def get(self, request):
         limit = int(request.query_params.get('limit', 50))
 
@@ -327,6 +450,22 @@ class AllUsersView(APIView):
     """Get all users for friends search/discovery"""
     permission_classes = [permissions.IsAuthenticated]
 
+    @extend_schema(
+        tags=['Users'],
+        summary='List all users',
+        description='Returns all users except the authenticated user. Supports search by username. Shows online status and friendship state.',
+        parameters=[
+            OpenApiParameter('search', str, description='Filter by username', required=False),
+            OpenApiParameter('limit', int, description='Max results (default 50)', required=False),
+        ],
+        responses={200: inline_serializer('UserListEntry', fields={
+            'id': s.IntegerField(),
+            'username': s.CharField(),
+            'avatar': s.CharField(allow_null=True),
+            'online_status': s.BooleanField(),
+            'is_friend': s.BooleanField(),
+        }, many=True)},
+    )
     def get(self, request):
         search = request.query_params.get('search', '').strip()
         limit = int(request.query_params.get('limit', 50))
@@ -360,7 +499,16 @@ class AllUsersView(APIView):
 # ──────────────── Password Change ────────────────
 class PasswordChangeView(APIView):
     permission_classes = [permissions.IsAuthenticated]
-    
+
+    @extend_schema(
+        tags=['Auth'],
+        summary='Change password',
+        description='Changes the authenticated user\'s password. Requires current password for verification.',
+        request=PasswordChangeSerializer,
+        responses={200: inline_serializer('PasswordChangeResponse', fields={
+            'detail': s.CharField(),
+        })},
+    )
     def put(self, request):
         serializer = PasswordChangeSerializer(
             data=request.data,
@@ -376,7 +524,16 @@ class PasswordChangeView(APIView):
 # ──────────────── Add/Remove Friend ────────────────
 class AddFriendView(APIView):
     permission_classes = [permissions.IsAuthenticated]
-    
+
+    @extend_schema(
+        tags=['Friends'],
+        summary='Add friend',
+        description='Sends a friend request to the specified user. Both users become friends immediately (mutual).',
+        request=FriendRequestSerializer,
+        responses={200: inline_serializer('AddFriendResponse', fields={
+            'detail': s.CharField(),
+        })},
+    )
     def post(self, request):
         serializer = FriendRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -412,6 +569,12 @@ class AddFriendView(APIView):
 class RemoveFriendView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
+    @extend_schema(
+        tags=['Friends'],
+        summary='Remove friend',
+        description='Removes a friend by user ID. The friendship is removed from both sides.',
+        responses={204: None},
+    )
     def delete(self, request, user_id):
         try:
             friend = User.objects.get(id=user_id)
@@ -432,6 +595,17 @@ class RemoveFriendView(APIView):
 class PresenceView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
+    @extend_schema(
+        tags=['Presence'],
+        summary='Send heartbeat',
+        description='Updates the user\'s last_seen timestamp and sets online status. Frontend should call this every 3 seconds. Users are considered offline after 5 seconds of inactivity.',
+        request=inline_serializer('PresenceRequest', fields={
+            'status': s.CharField(help_text='"online" or "offline"'),
+        }),
+        responses={200: inline_serializer('PresenceResponse', fields={
+            'online_status': s.BooleanField(),
+        })},
+    )
     def post(self, request):
         from django.utils import timezone
         request.user.online_status = True
@@ -440,6 +614,7 @@ class PresenceView(APIView):
         return Response({'online_status': True})
 
 
+@extend_schema(tags=['Friends'], summary='List friends', description='Returns the authenticated user\'s friend list with online status and profile info.')
 class FriendListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = UserSerializer
@@ -449,8 +624,15 @@ class FriendListView(generics.ListAPIView):
 
 # ──────────────── OAuth 42: Redirect ────────────────
 class OAuth42RedirectView(APIView):
+    """Redirects the user to 42 intra OAuth authorization page."""
     permission_classes = [permissions.AllowAny]
 
+    @extend_schema(
+        tags=['OAuth'],
+        summary='Start 42 OAuth flow',
+        description='Redirects to 42 intra authorization page. After user approves, 42 redirects back to the callback URL.',
+        responses={302: None},
+    )
     def get(self, request):
         authorize_url = (
             "https://api.intra.42.fr/oauth/authorize"
@@ -463,8 +645,18 @@ class OAuth42RedirectView(APIView):
 
 # ──────────────── OAuth 42: Callback ────────────────
 class OAuth42CallbackView(APIView):
+    """Handles the OAuth callback from 42 intra."""
     permission_classes = [permissions.AllowAny]
 
+    @extend_schema(
+        tags=['OAuth'],
+        summary='42 OAuth callback',
+        description='Receives the authorization code from 42 intra, exchanges it for tokens, creates or links user account, and redirects to frontend with JWT tokens.',
+        parameters=[
+            OpenApiParameter('code', str, description='Authorization code from 42 intra', required=True),
+        ],
+        responses={302: None},
+    )
     def get(self, request):
         code = request.query_params.get('code')
         if not code:
@@ -536,10 +728,29 @@ class OAuth42CallbackView(APIView):
         )
         return redirect(frontend_url)
     
-# ──────────────── User Match History ────────────────
+# ──────────────── Match Result (internal) ────────────────
 class MatchResultView(APIView):
+    """Internal endpoint called by game_service to record match results."""
     permission_classes = [permissions.AllowAny]
 
+    @extend_schema(
+        tags=['Match'],
+        summary='Record match result (internal)',
+        description='Called by game_service after a match ends. Requires X-Service-Secret header. Updates player stats, XP, and grants achievements.',
+        request=inline_serializer('MatchResultRequest', fields={
+            'winner_team': s.CharField(help_text='"red", "blue", or null for draw'),
+            'score_red': s.IntegerField(),
+            'score_blue': s.IntegerField(),
+            'duration_seconds': s.IntegerField(),
+            'red_player_ids': s.ListField(child=s.IntegerField(), help_text='List of user IDs on red team'),
+            'blue_player_ids': s.ListField(child=s.IntegerField(), help_text='List of user IDs on blue team'),
+            'end_reason': s.CharField(help_text='score_limit, time_up, forfeit, disconnect', required=False),
+        }),
+        responses={201: inline_serializer('MatchResultResponse', fields={
+            'detail': s.CharField(),
+            'match_id': s.IntegerField(),
+        })},
+    )
     def post(self, request):
         secret = request.headers.get('X-Service-Secret', '')
         expected = getattr(settings, 'SERVICE_SECRET', '')

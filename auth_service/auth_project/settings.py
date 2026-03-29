@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'rest_framework_simplejwt.token_blacklist',
+    'drf_spectacular',
     'auth_app',
 ]
 
@@ -101,6 +102,31 @@ REST_FRAMEWORK = {
         'anon': '30/minute',
         'user': '100/minute',
     },
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+# ---------- API Documentation ----------
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'ft_transcendence Auth API',
+    'DESCRIPTION': 'Authentication, user management, friends, stats, leaderboard, and match recording API.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'SWAGGER_UI_SETTINGS': {
+        'deepLinking': True,
+        'persistAuthorization': True,
+    },
+    'COMPONENT_SPLIT_REQUEST': True,
+    'TAGS': [
+        {'name': 'Auth', 'description': 'Registration, login, logout, token refresh'},
+        {'name': 'Profile', 'description': 'User profile and avatar/banner management'},
+        {'name': 'Users', 'description': 'User discovery and public profiles'},
+        {'name': 'Friends', 'description': 'Friend list management'},
+        {'name': 'Stats', 'description': 'Player statistics, match history, achievements'},
+        {'name': 'Leaderboard', 'description': 'Global ranking'},
+        {'name': 'Presence', 'description': 'Online/offline heartbeat'},
+        {'name': 'OAuth', 'description': '42 OAuth integration'},
+        {'name': 'Match', 'description': 'Internal match result recording'},
+    ],
 }
 
 # ---------- JWT ----------
