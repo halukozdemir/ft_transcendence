@@ -13,14 +13,14 @@ const Footer = () => {
             onClick={() => navigate("/privacy")}
             type="button"
           >
-            Gizlilik
+            Privacy
           </button>
           <button
             className="cursor-pointer transition-colors hover:text-white"
             onClick={() => navigate("/terms")}
             type="button"
           >
-            Kullanım Koşulları
+            Terms of Use
           </button>
         </div>
 

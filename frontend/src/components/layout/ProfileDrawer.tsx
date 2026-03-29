@@ -42,7 +42,7 @@ const ProfileDrawer = ({ open, onClose }: ProfileDrawerProps) => {
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[var(--dashboard-border)] px-5 py-4">
-          <span className="text-sm font-semibold text-white">Menü</span>
+          <span className="text-sm font-semibold text-white">Menu</span>
           <button
             className="cursor-pointer rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-[var(--dashboard-border)] hover:text-white"
             onClick={onClose}
@@ -76,10 +76,10 @@ const ProfileDrawer = ({ open, onClose }: ProfileDrawerProps) => {
         {/* Nav links */}
         <nav className="flex flex-col gap-1 px-3 py-4">
           {[
-            { label: "Lobi",         path: "/",            icon: "brand"         },
-            { label: "Profil",       path: "/profile",     icon: "verified"      },
-            { label: "Liderlik Tablosu", path: "/leaderboard", icon: "filter"    },
-            { label: "Ayarlar",      path: "/settings",    icon: "settings"      },
+            { label: "Lobby",       path: "/",            icon: "brand"         },
+            { label: "Profile",     path: "/profile",     icon: "verified"      },
+            { label: "Leaderboard", path: "/leaderboard", icon: "filter"        },
+            { label: "Settings",    path: "/settings",    icon: "settings"      },
           ].map(({ label, path, icon }) => (
             <button
               key={label}
@@ -101,7 +101,7 @@ const ProfileDrawer = ({ open, onClose }: ProfileDrawerProps) => {
             type="button"
           >
             <AppIcon name="join" size={18} />
-            Çıkış Yap
+            Log Out
           </button>
         </div>
       </div>

@@ -29,7 +29,7 @@ const AuthPage = () => {
                 HAX<span className="text-[var(--dashboard-primary)]">CLONE</span>
               </h1>
             </div>
-            <p className="text-slate-400">En iyi rekabetçi oyun platformu</p>
+            <p className="text-slate-400">The best competitive gaming platform</p>
           </div>
 
           {/* Forms */}
@@ -37,7 +37,7 @@ const AuthPage = () => {
 
           {/* Footer */}
           <p className="text-center text-xs text-slate-500">
-            Giriş yaparak kullanım koşullarımızı ve gizlilik politikamızı kabul etmiş olursunuz
+            By signing in, you agree to our terms of use and privacy policy
           </p>
         </div>
       </div>

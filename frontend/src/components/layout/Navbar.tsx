@@ -5,9 +5,9 @@ import AppIcon from "../ui/AppIcon";
 import ProfileDrawer from "./ProfileDrawer";
 
 const NAV_LINKS = [
-  { label: "Lobi",        path: "/"            },
-  { label: "Arkadaşlar",  path: "/friends"     },
-  { label: "Liderlik Tablosu", path: "/leaderboard" },
+  { label: "Lobby",       path: "/"            },
+  { label: "Friends",     path: "/friends"     },
+  { label: "Leaderboard", path: "/leaderboard" },
 ];
 
 const Navbar = () => {
@@ -59,7 +59,7 @@ const Navbar = () => {
             <button
               className="cursor-pointer rounded-lg p-2 text-slate-400 transition-colors hover:bg-(--dashboard-border)"
               type="button"
-              aria-label="Bildirimler"
+              aria-label="Notifications"
             >
               <AppIcon name="notifications" size={22} />
             </button>

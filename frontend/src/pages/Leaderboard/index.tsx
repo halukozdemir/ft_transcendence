@@ -52,7 +52,7 @@ const LeaderboardPage = () => {
 
   return (
     <div className="px-4 py-8 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold text-white mb-8">Liderlik Tablosu</h1>
+      <h1 className="text-2xl font-bold text-white mb-8">Leaderboard</h1>
 
       {/* Top 3 Podium */}
       {!search && top3.length > 0 && (
@@ -85,10 +85,10 @@ const LeaderboardPage = () => {
         </div>
       )}
 
-      {/* Tablo */}
+      {/* Table */}
       <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
 
-        {/* Arama */}
+        {/* Search */}
         <div className="p-4 border-b border-white/10">
           <label className="group relative block">
             <span className="absolute top-1/2 left-4 -translate-y-1/2 text-slate-500 transition-colors group-focus-within:text-(--dashboard-primary)">
@@ -97,7 +97,7 @@ const LeaderboardPage = () => {
             <input
               className="w-full rounded-xl border border-white/10 bg-white/5 py-2.5 pr-4 pl-10 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-(--dashboard-primary)"
               onChange={(e) => handleSearch(e.target.value)}
-              placeholder="Oyuncu ara..."
+              placeholder="Search player..."
               type="text"
               value={search}
             />
@@ -106,11 +106,11 @@ const LeaderboardPage = () => {
 
         {/* Header */}
         <div className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-white/10">
-          <div className="col-span-1 text-xs font-bold text-slate-500 uppercase">Sıra</div>
-          <div className="col-span-4 text-xs font-bold text-slate-500 uppercase">Oyuncu</div>
-          <div className="col-span-2 text-xs font-bold text-slate-500 uppercase">Seviye</div>
+          <div className="col-span-1 text-xs font-bold text-slate-500 uppercase">Rank</div>
+          <div className="col-span-4 text-xs font-bold text-slate-500 uppercase">Player</div>
+          <div className="col-span-2 text-xs font-bold text-slate-500 uppercase">Level</div>
           <div className="col-span-3 text-xs font-bold text-slate-500 uppercase">XP</div>
-          <div className="col-span-2 text-xs font-bold text-slate-500 uppercase text-right">G / T</div>
+          <div className="col-span-2 text-xs font-bold text-slate-500 uppercase text-right">W / T</div>
         </div>
 
         {/* Rows */}
@@ -139,13 +139,13 @@ const LeaderboardPage = () => {
                   <span className="truncate text-sm font-semibold text-white">{entry.username}</span>
                 </div>
                 <div className="col-span-2 flex items-center">
-                  <span className="text-sm font-bold text-slate-300">Lvl {entry.level}</span>
+                  <span className="text-sm font-bold text-slate-300">Level {entry.level}</span>
                 </div>
                 <div className="col-span-3 flex items-center">
                   <span className="text-sm font-bold text-(--dashboard-primary)">{entry.xp.toLocaleString()} XP</span>
                 </div>
                 <div className="col-span-2 flex items-center justify-end gap-2 text-sm">
-                  <span className="font-semibold text-green-400">{entry.wins}G</span>
+                  <span className="font-semibold text-green-400">{entry.wins}W</span>
                   <span className="text-slate-600">/</span>
                   <span className="text-slate-400">{entry.total_matches}</span>
                 </div>
@@ -155,7 +155,7 @@ const LeaderboardPage = () => {
 
         {paginated.length === 0 && !loading && (
           <div className="py-12 text-center text-slate-500 text-sm">
-            {search ? `"${search}" için sonuç bulunamadı` : "Henüz sıralamada oyuncu yok"}
+            {search ? `No results found for "${search}"` : "No players on the leaderboard yet"}
           </div>
         )}
 

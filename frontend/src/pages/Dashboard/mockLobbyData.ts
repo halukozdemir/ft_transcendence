@@ -3,7 +3,7 @@ import type { Friend, PlayerProfile, Room } from "../../types/lobby";
 export const profile: PlayerProfile = {
   nickname: "ProPlayer_99",
   level: 24,
-  rankText: "Küresel Sıralama: #4,201",
+  rankText: "Global Rank: #4,201",
   xpCurrent: 14250,
   xpGoal: 20000,
   wins: 150,
@@ -73,7 +73,7 @@ export const friends: Friend[] = [
     id: "friend-1",
     nickname: "SniperKing",
     status: "ingame",
-    detail: "Oyunda",
+    detail: "In Game",
     currentPlayers: 4,
     maxPlayers: 6,
     avatarUrl:
@@ -83,7 +83,7 @@ export const friends: Friend[] = [
     id: "friend-2",
     nickname: "GhostKeeper",
     status: "available",
-    detail: "Müsait",
+    detail: "Available",
     avatarUrl:
       "https://lh3.googleusercontent.com/aida-public/AB6AXuAWwOadiikk9zupJ8D0h4AH2tzfP1bNZ9YWC_ovCZd_PkIwXg08hZf5CHUHn7awYspCu90Q-s92gkVTo8Qno3vUZ5nyxTIirFAOVJOiGE7GJREbmXVIqPKAHm0mQww5tJlviMQFXSYBFGmI1DrooNhnjjIu9GzU7C5TeUUasIb3rIHOdEGkFXIbeKK0GPUiZO_awrggrxWHzPlfT9M0qeYSJ1-fvhh5lkzFGP4-SxveFQbO5-XMMxKPbesn5FmIyZcV3U3HZgBWudjj",
   },
@@ -91,7 +91,7 @@ export const friends: Friend[] = [
     id: "friend-3",
     nickname: "BallerKilla",
     status: "offline",
-    detail: "Çevrimdışı",
+    detail: "Offline",
     initials: "BK",
   },
 ];

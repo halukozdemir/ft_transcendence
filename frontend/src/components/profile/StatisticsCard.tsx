@@ -12,7 +12,7 @@ const StatisticsCard = ({ stats }: StatisticsCardProps) => {
 
   return (
     <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-sm">
-      <h3 className="text-lg font-bold mb-6">Kariyer İstatistikleri</h3>
+      <h3 className="text-lg font-bold mb-6">Career Statistics</h3>
       <div className="space-y-6">
         {/* XP */}
         <div>
@@ -27,14 +27,14 @@ const StatisticsCard = ({ stats }: StatisticsCardProps) => {
             ></div>
           </div>
           <p className="mt-2 text-xs text-slate-400">
-            Sonraki seviye: {xpInLevel}/{xpGoal} XP
+            Next level: {xpInLevel}/{xpGoal} XP
           </p>
         </div>
 
         {/* Win Rate */}
         <div>
           <div className="flex justify-between items-end mb-2">
-            <span className="text-slate-400 text-sm font-medium">Kazanma Oranı</span>
+            <span className="text-slate-400 text-sm font-medium">Win Rate</span>
             <span className="text-[var(--dashboard-primary)] text-xl font-bold">{stats.winPercentage}%</span>
           </div>
           <div className="h-3 w-full bg-white/10 rounded-full overflow-hidden">
@@ -48,11 +48,11 @@ const StatisticsCard = ({ stats }: StatisticsCardProps) => {
         {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-4 pt-4">
           <div className="bg-white/5 rounded-xl p-4 border border-white/5">
-            <span className="text-xs uppercase tracking-wider text-slate-500 font-bold">Toplam Maç</span>
+            <span className="text-xs uppercase tracking-wider text-slate-500 font-bold">Total Matches</span>
             <div className="text-2xl font-bold mt-1">{stats.totalMatches.toLocaleString()}</div>
           </div>
           <div className="bg-white/5 rounded-xl p-4 border border-white/5">
-            <span className="text-xs uppercase tracking-wider text-slate-500 font-bold">Atılan Gol</span>
+            <span className="text-xs uppercase tracking-wider text-slate-500 font-bold">Goals Scored</span>
             <div className="text-2xl font-bold mt-1">{stats.goalsScored.toLocaleString()}</div>
           </div>
         </div>

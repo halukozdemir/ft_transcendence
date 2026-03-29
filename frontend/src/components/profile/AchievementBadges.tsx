@@ -21,9 +21,9 @@ const iconByType = {
 const AchievementBadges = ({ achievements }: AchievementBadgesProps) => {
   return (
     <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-      <h3 className="text-lg font-bold mb-4">Son Başarımlar</h3>
+      <h3 className="text-lg font-bold mb-4">Recent Achievements</h3>
       {achievements.length === 0 && (
-        <p className="text-sm text-slate-500">Henüz hiç başarım kazanılmadı.</p>
+        <p className="text-sm text-slate-500">No achievements unlocked yet.</p>
       )}
       <div className="flex flex-wrap gap-3">
         {achievements.map((achievement) => {

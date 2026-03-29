@@ -51,7 +51,7 @@ const FriendRow = ({ friend, onAction }: FriendRowProps) => {
           <p className={["text-[10px]", detailClassByType[friend.status]].join(" ")}>
             {friend.detail}
             {friend.status === "ingame" && friend.currentPlayers !== undefined && friend.maxPlayers !== undefined && (
-              <span className="text-slate-400"> • {friend.currentPlayers}/{friend.maxPlayers} kişi</span>
+              <span className="text-slate-400"> • {friend.currentPlayers}/{friend.maxPlayers} players</span>
             )}
           </p>
         </div>

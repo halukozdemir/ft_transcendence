@@ -13,11 +13,11 @@ const MatchHistoryTable = ({ matches, onMatchClick, page, totalPages, onPageChan
   return (
     <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden backdrop-blur-sm">
       <div className="p-6 border-b border-white/10">
-        <h3 className="text-lg font-bold">Maç Geçmişi</h3>
+        <h3 className="text-lg font-bold">Match History</h3>
       </div>
       <div className="divide-y divide-white/5">
         {matches.length === 0 ? (
-          <p className="p-6 text-sm text-slate-500">Henüz hiç maç oynanmadı.</p>
+          <p className="p-6 text-sm text-slate-500">No matches played yet.</p>
         ) : (
           matches.map((match) => (
             <MatchHistoryRow key={match.id} match={match} onClick={onMatchClick} />
@@ -33,7 +33,7 @@ const MatchHistoryTable = ({ matches, onMatchClick, page, totalPages, onPageChan
             type="button"
           >
             <span className="material-symbols-outlined text-base">chevron_left</span>
-            Önceki
+            Previous
           </button>
           <div className="flex items-center gap-1">
             {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
@@ -53,7 +53,7 @@ const MatchHistoryTable = ({ matches, onMatchClick, page, totalPages, onPageChan
             onClick={() => onPageChange(page + 1)}
             type="button"
           >
-            Sonraki
+            Next
             <span className="material-symbols-outlined text-base">chevron_right</span>
           </button>
         </div>

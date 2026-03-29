@@ -190,24 +190,24 @@ export function useGameSocket(accessToken?: string | null, options: UseGameSocke
     });
 
     socket.on("room_full", () => {
-      setJoinError("Oda dolu.");
+      setJoinError("Room is full.");
       console.warn("Room is full");
     });
 
     socket.on("room_not_found", () => {
-      setJoinError("Oda bulunamadı.");
+      setJoinError("Room not found.");
     });
 
     socket.on("room_invalid_password", () => {
-      setJoinError("Oda şifresi hatalı.");
+      setJoinError("Incorrect room password.");
     });
 
     socket.on("disconnect", () => {
       setConnected(false);
       if (joinedRef.current) {
-        setJoinError("Bağlantı koptu. Yeniden bağlanılıyor...");
+        setJoinError("Connection lost. Reconnecting...");
       } else if (options.roomId) {
-        setJoinError((prev: string | null) => prev || "Odaya katılamadı.");
+        setJoinError((prev: string | null) => prev || "Could not join room.");
       }
     });
 
@@ -218,11 +218,11 @@ export function useGameSocket(accessToken?: string | null, options: UseGameSocke
     socket.on("connect_error", (error: any) => {
       const message = String(error?.message || "").toLowerCase();
       if (message.includes("authentication failed") || message.includes("no authentication token")) {
-        setJoinError("Oturum doğrulaması başarısız.");
+        setJoinError("Session authentication failed.");
         return;
       }
       if (options.roomId && !joinedRef.current) {
-        setJoinError("Odaya katılamadı.");
+        setJoinError("Could not join room.");
       }
     });
 

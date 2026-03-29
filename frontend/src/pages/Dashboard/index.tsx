@@ -118,14 +118,14 @@ const DashboardPage = () => {
     if (!room) { goToRoom(roomId); return; }
 
     if (room.isLocked) {
-      const enteredPassword = window.prompt("Bu oda şifreli. Lütfen şifreyi girin:");
+      const enteredPassword = window.prompt("This room is password-protected. Please enter the password:");
       if (enteredPassword === null) return;
       if (!enteredPassword.trim()) return;
       try {
         const result = await gameApi.validateRoomPassword(roomId, enteredPassword.trim());
-        if (!result.valid) { window.alert("Şifre hatalı."); return; }
+        if (!result.valid) { window.alert("Incorrect password."); return; }
       } catch {
-        window.alert("Şifre doğrulanamadı. Lütfen tekrar deneyin."); return;
+        window.alert("Password validation failed. Please try again."); return;
       }
       goToRoom(roomId, enteredPassword.trim());
       return;
@@ -153,7 +153,7 @@ const DashboardPage = () => {
     id: String(f.id),
     nickname: f.username,
     status: f.online_status ? "available" as const : "offline" as const,
-    detail: f.online_status ? "Çevrimiçi" : "Çevrimdışı",
+    detail: f.online_status ? "Online" : "Offline",
     avatarUrl: f.avatar || undefined,
     initials: f.username.slice(0, 2).toUpperCase(),
   }));
@@ -172,7 +172,7 @@ const DashboardPage = () => {
   const friendList = (
     <>
       {displayFriends.length === 0 ? (
-        <p className="text-xs text-slate-500">Henüz arkadaş eklenmedi.</p>
+        <p className="text-xs text-slate-500">No friends added yet.</p>
       ) : (
         displayFriends.map((friend: Friend) => (
           <FriendRow
@@ -190,8 +190,8 @@ const DashboardPage = () => {
 
       {/* ── Mobile action bar ─────────────────────────────── */}
       <div className="flex gap-3 border-b border-(--dashboard-border) py-3 lg:hidden">
-        <ActionButton icon="quickMatch" label="HIZLI MAÇ" onClick={() => goToGame("quick-match")} variant="primary" />
-        <ActionButton icon="createRoom" label="ODA OLUŞTUR" onClick={() => setCreateRoomOpen(true)} />
+        <ActionButton icon="quickMatch" label="QUICK MATCH" onClick={() => goToGame("quick-match")} variant="primary" />
+        <ActionButton icon="createRoom" label="CREATE ROOM" onClick={() => setCreateRoomOpen(true)} />
       </div>
 
       {/* ── Three-column layout ───────────────────────────── */}
@@ -219,7 +219,7 @@ const DashboardPage = () => {
             </div>
             <h3 className="mb-1 text-base font-bold text-white xl:text-lg">{user?.username ?? "—"}</h3>
             <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
-              {playerStats ? `Küresel Sıralama: #${playerStats.ranking.toLocaleString()}` : "—"}
+              {playerStats ? `Global Rank: #${playerStats.ranking.toLocaleString()}` : "—"}
             </p>
             <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-(--dashboard-border)">
               <div className="h-full bg-(--dashboard-primary)" style={{ width: `${xpPct}%` }} />
@@ -230,10 +230,10 @@ const DashboardPage = () => {
           </button>
 
           <div className="grid grid-cols-2 gap-3">
-            <StatCard label="Galibiyet"   value={playerStats ? String(playerStats.wins) : "—"} />
-            <StatCard label="Mağlubiyet" value={playerStats ? String(playerStats.losses) : "—"} />
+            <StatCard label="Wins"   value={playerStats ? String(playerStats.wins) : "—"} />
+            <StatCard label="Losses" value={playerStats ? String(playerStats.losses) : "—"} />
             <div className="col-span-2">
-              <StatCard accent label="G/M Oranı" value={wlRatio} />
+              <StatCard accent label="W/L Ratio" value={wlRatio} />
             </div>
           </div>
 
@@ -247,7 +247,7 @@ const DashboardPage = () => {
         <section className="flex flex-1 flex-col overflow-hidden px-4">
           <div className="pt-6 pb-2">
             <div className="mb-4">
-              <h1 className="text-xl font-bold text-white md:text-2xl">Aktif Odalar</h1>
+              <h1 className="text-xl font-bold text-white md:text-2xl">Active Rooms</h1>
             </div>
             <label className="group relative block">
               <span className="absolute top-1/2 left-4 -translate-y-1/2 text-slate-500 transition-colors group-focus-within:text-(--dashboard-primary)">
@@ -255,7 +255,7 @@ const DashboardPage = () => {
               </span>
               <input
                 className="w-full rounded-xl border-2 border-(--dashboard-border) bg-(--dashboard-card) py-3 pr-4 pl-12 text-white placeholder:text-slate-600 focus:border-(--dashboard-primary) focus:ring-0"
-                placeholder="Oda adı veya sunucu ara..."
+                placeholder="Search room name or host..."
                 type="text"
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
@@ -265,19 +265,19 @@ const DashboardPage = () => {
 
           <div className="dashboard-scrollbar flex-1 space-y-3 overflow-y-auto pb-6">
             {roomsLoading && activeRooms.length === 0 && (
-              <p className="text-sm text-slate-500">Odalar yükleniyor...</p>
+              <p className="text-sm text-slate-500">Loading rooms...</p>
             )}
             {filteredRooms.map((room) => (
               <RoomCard key={room.id} room={room} onJoin={handleJoinRoom} />
             ))}
             {!roomsLoading && filteredRooms.length === 0 && (
-              <p className="text-sm text-slate-500">Aktif oda bulunamadı.</p>
+              <p className="text-sm text-slate-500">No active rooms found.</p>
             )}
 
             {/* Mobile: friends inline below rooms */}
             <div className="xl:hidden pt-2">
               <h4 className="mb-3 text-xs font-bold uppercase tracking-widest text-slate-500">
-                Çevrimiçi Arkadaşlar
+                Online Friends
               </h4>
               <div className="space-y-3">{friendList}</div>
               <button
@@ -285,7 +285,7 @@ const DashboardPage = () => {
                 onClick={() => navigate("/friends")}
                 type="button"
               >
-                Tüm Arkadaşlar
+                All Friends
               </button>
             </div>
           </div>
@@ -297,19 +297,19 @@ const DashboardPage = () => {
         {/* Right sidebar — xl+ */}
         <aside className="hidden w-72 shrink-0 flex-col gap-6 overflow-y-auto px-4 py-6 xl:flex">
           <div className="space-y-3">
-            <ActionButton icon="quickMatch" label="HIZLI MAÇ" onClick={() => goToGame("quick-match")} variant="primary" />
-            <ActionButton icon="createRoom" label="ODA OLUŞTUR" onClick={() => setCreateRoomOpen(true)} />
+            <ActionButton icon="quickMatch" label="QUICK MATCH" onClick={() => goToGame("quick-match")} variant="primary" />
+            <ActionButton icon="createRoom" label="CREATE ROOM" onClick={() => setCreateRoomOpen(true)} />
           </div>
 
           <div>
-            <h4 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-500">Çevrimiçi Arkadaşlar</h4>
+            <h4 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-500">Online Friends</h4>
             <div className="space-y-4">{friendList}</div>
             <button
               className="cursor-pointer mt-2 w-full rounded-lg py-2 text-xs font-semibold text-slate-400 hover:text-white border border-(--dashboard-border) hover:border-white/20 transition-colors"
               onClick={() => navigate("/friends")}
               type="button"
             >
-              Tüm Arkadaşlar
+              All Friends
             </button>
           </div>
         </aside>

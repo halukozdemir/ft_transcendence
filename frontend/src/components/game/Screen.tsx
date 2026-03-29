@@ -20,10 +20,10 @@ export default function Screen({ state, myPlayerId, connected = false, onLeaveRo
   const winnerTeam = state?.match.winnerTeam;
 
   const winnerLabel = !winnerTeam
-    ? "Berabere"
+    ? "Draw"
     : winnerTeam === "red"
-      ? "Kırmızı Takım Kazandı"
-      : "Mavi Takım Kazandı";
+      ? "Red Team Won"
+      : "Blue Team Won";
 
   const iWon = Boolean(myTeam && winnerTeam && myTeam === winnerTeam);
 
@@ -62,10 +62,10 @@ export default function Screen({ state, myPlayerId, connected = false, onLeaveRo
           <Scoreboard score={state.score} match={state.match} />
           <div className="flex flex-wrap items-center justify-center gap-2 text-[11px]">
             <span className="px-2 py-1 rounded bg-surface border border-border text-white/80">
-              Oda: {state.room.id ?? "-"}
+              Room: {state.room.id ?? "-"}
             </span>
             <span className="px-2 py-1 rounded bg-surface border border-border text-white/80">
-              Oyuncu: {state.room.playerCount}/{state.room.maxPlayers}
+              Players: {state.room.playerCount}/{state.room.maxPlayers}
             </span>
           </div>
         </div>
@@ -74,13 +74,13 @@ export default function Screen({ state, myPlayerId, connected = false, onLeaveRo
       {/* Lobby header */}
       {state && isLobby && (
         <div className="flex flex-col items-center gap-1">
-          <h2 className="text-lg font-bold text-white">Lobi</h2>
+          <h2 className="text-lg font-bold text-white">Lobby</h2>
           <div className="flex flex-wrap items-center justify-center gap-2 text-[11px]">
             <span className="px-2 py-1 rounded bg-surface border border-border text-white/80">
-              Oda: {state.room.id ?? "-"}
+              Room: {state.room.id ?? "-"}
             </span>
             <span className="px-2 py-1 rounded bg-surface border border-border text-white/80">
-              Oyuncu: {state.room.playerCount}/{state.room.maxPlayers}
+              Players: {state.room.playerCount}/{state.room.maxPlayers}
             </span>
           </div>
         </div>
@@ -96,7 +96,7 @@ export default function Screen({ state, myPlayerId, connected = false, onLeaveRo
               onClick={onLeaveRoom}
               className="rounded-lg border border-red-500/40 bg-red-500/15 px-3 py-1.5 text-xs font-semibold text-red-300 transition hover:bg-red-500/25"
             >
-              Odadan Çık
+              Leave Room
             </button>
           </div>
         )}
@@ -117,7 +117,7 @@ export default function Screen({ state, myPlayerId, connected = false, onLeaveRo
                 {/* Red Team */}
                 <div className="rounded-xl border border-team-red/30 bg-team-red/5 p-3">
                   <h3 className="text-center text-sm font-bold text-team-red mb-3">
-                    Kırmızı Takım ({state.room.teams.red}/{state.room.maxPlayersPerTeam})
+                    Red Team ({state.room.teams.red}/{state.room.maxPlayersPerTeam})
                   </h3>
                   <div className="space-y-2">
                     {state.lobby.players
@@ -132,17 +132,17 @@ export default function Screen({ state, myPlayerId, connected = false, onLeaveRo
                           }`}
                         >
                           <span className="text-white/90 truncate">
-                            {p.clientId?.toString().slice(0, 8) || "Oyuncu"}
-                            {p.id === myPlayerId && " (Sen)"}
+                            {p.clientId?.toString().slice(0, 8) || "Player"}
+                            {p.id === myPlayerId && " (You)"}
                           </span>
                           <span className={`text-xs font-semibold ${p.ready ? "text-green-400" : "text-white/40"}`}>
-                            {p.ready ? "HAZIR" : "Bekliyor"}
+                            {p.ready ? "READY" : "Waiting"}
                           </span>
                         </div>
                       ))}
                     {Array.from({ length: state.room.maxPlayersPerTeam - state.room.teams.red }).map((_, i) => (
                       <div key={`empty-red-${i}`} className="rounded-lg border border-dashed border-white/10 px-3 py-2 text-sm text-white/20 text-center">
-                        Boş Slot
+                        Empty Slot
                       </div>
                     ))}
                   </div>
@@ -151,7 +151,7 @@ export default function Screen({ state, myPlayerId, connected = false, onLeaveRo
                 {/* Blue Team */}
                 <div className="rounded-xl border border-team-blue/30 bg-team-blue/5 p-3">
                   <h3 className="text-center text-sm font-bold text-team-blue mb-3">
-                    Mavi Takım ({state.room.teams.blue}/{state.room.maxPlayersPerTeam})
+                    Blue Team ({state.room.teams.blue}/{state.room.maxPlayersPerTeam})
                   </h3>
                   <div className="space-y-2">
                     {state.lobby.players
@@ -166,17 +166,17 @@ export default function Screen({ state, myPlayerId, connected = false, onLeaveRo
                           }`}
                         >
                           <span className="text-white/90 truncate">
-                            {p.clientId?.toString().slice(0, 8) || "Oyuncu"}
-                            {p.id === myPlayerId && " (Sen)"}
+                            {p.clientId?.toString().slice(0, 8) || "Player"}
+                            {p.id === myPlayerId && " (You)"}
                           </span>
                           <span className={`text-xs font-semibold ${p.ready ? "text-green-400" : "text-white/40"}`}>
-                            {p.ready ? "HAZIR" : "Bekliyor"}
+                            {p.ready ? "READY" : "Waiting"}
                           </span>
                         </div>
                       ))}
                     {Array.from({ length: state.room.maxPlayersPerTeam - state.room.teams.blue }).map((_, i) => (
                       <div key={`empty-blue-${i}`} className="rounded-lg border border-dashed border-white/10 px-3 py-2 text-sm text-white/20 text-center">
-                        Boş Slot
+                        Empty Slot
                       </div>
                     ))}
                   </div>
@@ -186,13 +186,13 @@ export default function Screen({ state, myPlayerId, connected = false, onLeaveRo
               {/* Status info */}
               <div className="mt-4 rounded-xl border border-border bg-bg/60 px-3 py-2 text-center text-xs text-white/60">
                 {!state.lobby.teamsEqual && (
-                  <span>Takımlar eşit olmalı. </span>
+                  <span>Teams must be balanced. </span>
                 )}
                 {state.lobby.teamsEqual && !state.lobby.allReady && (
-                  <span>Tüm oyuncular hazır olmalı. ({state.lobby.readyCount}/{state.lobby.totalCount} hazır)</span>
+                  <span>All players must be ready. ({state.lobby.readyCount}/{state.lobby.totalCount} ready)</span>
                 )}
                 {state.lobby.canStart && (
-                  <span className="text-green-400 font-semibold">Maç başlıyor...</span>
+                  <span className="text-green-400 font-semibold">Match starting...</span>
                 )}
               </div>
 
@@ -204,7 +204,7 @@ export default function Screen({ state, myPlayerId, connected = false, onLeaveRo
                   disabled={!connected || !canSwitch}
                   className="flex-1 rounded-xl border border-yellow-500/40 bg-yellow-500/15 px-4 py-2 text-sm font-semibold text-yellow-300 transition hover:bg-yellow-500/25 disabled:cursor-not-allowed disabled:border-border disabled:bg-bg/40 disabled:text-white/40"
                 >
-                  Takım Değiştir
+                  Switch Team
                 </button>
                 <button
                   type="button"
@@ -216,14 +216,14 @@ export default function Screen({ state, myPlayerId, connected = false, onLeaveRo
                       : "border-green-500/40 bg-green-500/15 text-green-300 hover:bg-green-500/25"
                   } disabled:cursor-not-allowed disabled:border-border disabled:bg-bg/40 disabled:text-white/40`}
                 >
-                  {amReady ? "Hazır Değilim" : "Hazırım"}
+                  {amReady ? "Not Ready" : "I'm Ready"}
                 </button>
                 <button
                   type="button"
                   onClick={onLeaveRoom}
                   className="rounded-xl border border-red-500/40 bg-red-500/15 px-4 py-2 text-sm font-semibold text-red-300 transition hover:bg-red-500/25"
                 >
-                  Çık
+                  Leave
                 </button>
               </div>
             </div>
@@ -234,19 +234,19 @@ export default function Screen({ state, myPlayerId, connected = false, onLeaveRo
         {state && isFinished && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/45 backdrop-blur-[1px]">
             <div className="w-[min(92%,420px)] rounded-2xl border border-border bg-surface/95 p-5 text-center shadow-xl">
-              <p className="text-xs uppercase tracking-[0.18em] text-white/60">Maç Bitti</p>
+              <p className="text-xs uppercase tracking-[0.18em] text-white/60">Match Finished</p>
               <h3 className={`mt-2 text-2xl font-black ${winnerTeam === "red" ? "text-team-red" : winnerTeam === "blue" ? "text-team-blue" : "text-system"}`}>
                 {winnerLabel}
               </h3>
               <p className="mt-2 text-sm text-white/80">
-                {winnerTeam ? (iWon ? "Tebrikler, senin takımın kazandı." : "Bu turu rakip takım aldı.") : "Skor eşit bitti."}
+                {winnerTeam ? (iWon ? "Congratulations, your team won." : "The opposing team won this round.") : "The match ended in a draw."}
               </p>
 
               <div className="mt-4 rounded-xl border border-border bg-bg/60 px-3 py-2 text-xs text-white/60">
                 {returnCountdown !== null && returnCountdown > 0 ? (
-                  <span>{returnCountdown} saniye içinde lobiye dönülüyor...</span>
+                  <span>Returning to lobby in {returnCountdown} seconds...</span>
                 ) : (
-                  <span>Lobiye dönülüyor...</span>
+                  <span>Returning to lobby...</span>
                 )}
               </div>
 
@@ -255,7 +255,7 @@ export default function Screen({ state, myPlayerId, connected = false, onLeaveRo
                 onClick={onLeaveRoom}
                 className="mt-4 w-full rounded-xl border border-red-500/40 bg-red-500/15 px-4 py-2 text-sm font-semibold text-red-300 transition hover:bg-red-500/25"
               >
-                Odadan Çık
+                Leave Room
               </button>
             </div>
           </div>

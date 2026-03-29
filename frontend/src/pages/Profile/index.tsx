@@ -21,11 +21,11 @@ const PAGE_SIZE = 5;
 
 function timeAgo(dateStr: string): string {
   const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-  if (diff < 60) return "Az önce";
-  if (diff < 3600) return `${Math.floor(diff / 60)} dakika önce`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)} saat önce`;
-  if (diff < 172800) return "Dün";
-  return `${Math.floor(diff / 86400)} gün önce`;
+  if (diff < 60) return "Just now";
+  if (diff < 3600) return `${Math.floor(diff / 60)} minutes ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
+  if (diff < 172800) return "Yesterday";
+  return `${Math.floor(diff / 86400)} days ago`;
 }
 
 const ProfilePage = () => {
@@ -57,7 +57,7 @@ const ProfilePage = () => {
       setTotalMatches(data.total);
       setMatches(
         data.results.map((m: any) => {
-          const opponentNames = m.opponents?.map((o: any) => o.username).join(", ") || `Maç #${m.id}`;
+          const opponentNames = m.opponents?.map((o: any) => o.username).join(", ") || `Match #${m.id}`;
           const result = (m.result as string).toUpperCase() as "WIN" | "LOSS" | "DRAW";
           return {
             id: String(m.id),
@@ -113,7 +113,7 @@ const ProfilePage = () => {
       setTotalMatches(matchData.total);
       setMatches(
         matchData.results.map((m: any) => {
-          const opponentNames = m.opponents?.map((o: any) => o.username).join(", ") || `Maç #${m.id}`;
+          const opponentNames = m.opponents?.map((o: any) => o.username).join(", ") || `Match #${m.id}`;
           const result = (m.result as string).toUpperCase() as "WIN" | "LOSS" | "DRAW";
           return {
             id: String(m.id),
@@ -164,7 +164,7 @@ const ProfilePage = () => {
   if (!user) {
     return (
       <div className="flex min-h-full items-center justify-center">
-        <p className="text-slate-400">Profil yükleniyor...</p>
+        <p className="text-slate-400">Loading profile...</p>
       </div>
     );
   }
@@ -172,7 +172,7 @@ const ProfilePage = () => {
   if (loading) {
     return (
       <div className="flex min-h-full items-center justify-center">
-        <p className="text-slate-400">İstatistikler yükleniyor...</p>
+        <p className="text-slate-400">Loading statistics...</p>
       </div>
     );
   }
@@ -181,7 +181,7 @@ const ProfilePage = () => {
   if (!displayUser) {
     return (
       <div className="flex min-h-full items-center justify-center">
-        <p className="text-slate-400">Kullanıcı bulunamadı</p>
+        <p className="text-slate-400">User not found</p>
       </div>
     );
   }

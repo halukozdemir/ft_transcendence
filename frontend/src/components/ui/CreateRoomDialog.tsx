@@ -26,11 +26,11 @@ const CreateRoomDialog = ({ open, onClose, onCreate }: CreateRoomDialogProps) =>
 
   const handleSubmit = async () => {
     if (!title.trim()) {
-      setError("Oda adı zorunludur.");
+      setError("Room name is required.");
       return;
     }
     if (isLocked && !password.trim()) {
-      setError("Şifreli oda için şifre girmelisiniz.");
+      setError("You must enter a password for a private room.");
       return;
     }
     try {
@@ -38,7 +38,7 @@ const CreateRoomDialog = ({ open, onClose, onCreate }: CreateRoomDialogProps) =>
       await onCreate({ title: title.trim(), maxPlayers, isLocked, password: password.trim() });
       handleClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Oda oluşturulamadı.");
+      setError(err instanceof Error ? err.message : "Room could not be created.");
     }
   };
 
@@ -70,7 +70,7 @@ const CreateRoomDialog = ({ open, onClose, onCreate }: CreateRoomDialogProps) =>
 
           {/* Header */}
           <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
-            <h2 className="text-base font-bold text-white">Oda Oluştur</h2>
+            <h2 className="text-base font-bold text-white">Create Room</h2>
             <button
               className="cursor-pointer rounded-lg p-1.5 text-slate-400 hover:bg-white/5 hover:text-white transition-colors"
               onClick={handleClose}
@@ -83,9 +83,9 @@ const CreateRoomDialog = ({ open, onClose, onCreate }: CreateRoomDialogProps) =>
           {/* Body */}
           <div className="px-6 py-5 space-y-5">
 
-            {/* Oda Adı */}
+            {/* Room Name */}
             <div>
-              <label className={labelClass}>Oda Adı</label>
+              <label className={labelClass}>Room Name</label>
               <input
                 autoFocus
                 className={inputClass}
@@ -97,9 +97,9 @@ const CreateRoomDialog = ({ open, onClose, onCreate }: CreateRoomDialogProps) =>
               />
             </div>
 
-            {/* Maksimum Oyuncu */}
+            {/* Maximum Players */}
             <div>
-              <label className={labelClass}>Maksimum Oyuncu</label>
+              <label className={labelClass}>Maximum Players</label>
               <div className="grid grid-cols-6 gap-2">
                 {MAX_PLAYERS_OPTIONS.map((n) => (
                   <button
@@ -119,11 +119,11 @@ const CreateRoomDialog = ({ open, onClose, onCreate }: CreateRoomDialogProps) =>
               </div>
             </div>
 
-            {/* Şifreli */}
+            {/* Private Room */}
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold text-white">Özel Oyun</p>
-                <p className="text-xs text-slate-500 mt-0.5">Odaya girmek için şifre gereksin</p>
+                <p className="text-sm font-semibold text-white">Private Room</p>
+                <p className="text-xs text-slate-500 mt-0.5">Password required to join the room</p>
               </div>
               <button
                 className={[
@@ -142,10 +142,10 @@ const CreateRoomDialog = ({ open, onClose, onCreate }: CreateRoomDialogProps) =>
               </button>
             </div>
 
-            {/* Şifre */}
+            {/* Password */}
             {isLocked && (
               <div>
-                <label className={labelClass}>Şifre</label>
+                <label className={labelClass}>Password</label>
                 <input
                   className={inputClass}
                   autoComplete="new-password"
@@ -169,7 +169,7 @@ const CreateRoomDialog = ({ open, onClose, onCreate }: CreateRoomDialogProps) =>
               onClick={handleSubmit}
               type="button"
             >
-              Oluştur
+              Create
             </button>
           </div>
 

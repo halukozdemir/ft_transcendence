@@ -26,7 +26,7 @@ export const mockMatches: Match[] = [
     result: "WIN",
     score: { us: 5, them: 2 },
     timestamp: new Date("2024-03-20T18:30:00"),
-    timeAgoText: "2 saat önce",
+    timeAgoText: "2 hours ago",
   },
   {
     id: "m2",
@@ -34,7 +34,7 @@ export const mockMatches: Match[] = [
     result: "WIN",
     score: { us: 3, them: 1 },
     timestamp: new Date("2024-03-20T16:00:00"),
-    timeAgoText: "5 saat önce",
+    timeAgoText: "5 hours ago",
   },
   {
     id: "m3",
@@ -42,7 +42,7 @@ export const mockMatches: Match[] = [
     result: "LOSS",
     score: { us: 1, them: 4 },
     timestamp: new Date("2024-03-19T21:00:00"),
-    timeAgoText: "Dün",
+    timeAgoText: "Yesterday",
   },
   {
     id: "m4",
@@ -50,7 +50,7 @@ export const mockMatches: Match[] = [
     result: "WIN",
     score: { us: 6, them: 3 },
     timestamp: new Date("2024-03-19T18:00:00"),
-    timeAgoText: "Dün",
+    timeAgoText: "Yesterday",
   },
   {
     id: "m5",
@@ -58,6 +58,6 @@ export const mockMatches: Match[] = [
     result: "DRAW",
     score: { us: 2, them: 2 },
     timestamp: new Date("2024-03-18T20:00:00"),
-    timeAgoText: "2 gün önce",
+    timeAgoText: "2 days ago",
   },
 ];
