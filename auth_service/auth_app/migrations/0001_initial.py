@@ -34,7 +34,6 @@ class Migration(migrations.Migration):
                 ('banner', models.ImageField(blank=True, default='banners/default.png', upload_to='banners/')),
                 ('online_status', models.BooleanField(default=False)),
                 ('last_seen', models.DateTimeField(blank=True, null=True)),
-                ('intra_id', models.IntegerField(blank=True, null=True, unique=True)),
                 ('bio', models.TextField(blank=True, max_length=500)),
                 ('friends', models.ManyToManyField(blank=True, related_name='friend_of', to=settings.AUTH_USER_MODEL)),
                 ('blocked_users', models.ManyToManyField(blank=True, related_name='blocked_by', to=settings.AUTH_USER_MODEL)),
