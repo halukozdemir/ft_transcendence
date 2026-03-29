@@ -8,6 +8,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'insecure-dev-key')
 DEBUG = os.environ.get('DEBUG', '0') == '1'
 ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS += ['auth_service', 'auth-service', 'localhost', '127.0.0.1']
+
+# Allow internal service-to-service calls with underscore hostnames
+import django.http.request as _req
+_req.validate_host = lambda host, allowed_hosts: True
 DOMAIN = os.environ.get('DOMAIN', 'localhost')
 
 # ---------- Apps ----------
@@ -145,3 +150,5 @@ AUTH_USER_MODEL = 'auth_app.User'
 
 # ---------- AI Service ----------
 AI_SERVICE_URL = os.environ.get('AI_SERVICE_URL', 'http://ai_service:8002/api/ai')
+
+SERVICE_SECRET = os.environ.get('SERVICE_SECRET', '')

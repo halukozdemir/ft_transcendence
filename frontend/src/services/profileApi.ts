@@ -23,8 +23,9 @@ export interface ProfileStats {
   wins: number;
   losses: number;
   win_rate: number;
-  elo_rating: number;
-  tier: string;
+  xp: number;
+  level: number;
+  ranking: number;
   achievements: Achievement[];
   last_match_date: string | null;
 }
@@ -126,9 +127,10 @@ export const profileApi = {
   getMatchHistory: async (
     userId: number,
     accessToken: string,
-    limit: number = 20
-  ): Promise<MatchHistory[]> => {
-    const res = await fetch(`${API_BASE_URL}/users/${userId}/matches/?limit=${limit}`, {
+    limit: number = 10,
+    offset: number = 0
+  ): Promise<{ results: MatchHistory[]; total: number }> => {
+    const res = await fetch(`${API_BASE_URL}/users/${userId}/matches/?limit=${limit}&offset=${offset}`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     if (!res.ok) throw new Error(`Get match history failed: ${res.statusText}`);

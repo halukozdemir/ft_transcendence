@@ -22,7 +22,7 @@ const GameLayout = () => {
 		return sessionStorage.getItem(`game-room-password:${roomId}`) || undefined;
 	}, [roomId]);
 
-	const { state, myPlayerId, connected, joinError, socket, debug, requestRematch } = useGameSocket(accessToken, {
+	const { state, myPlayerId, connected, joinError, socket, debug, switchTeam, toggleReady } = useGameSocket(accessToken, {
 		roomId,
 		roomPassword,
 		username: user?.username,
@@ -47,8 +47,9 @@ const GameLayout = () => {
 						state={state}
 						myPlayerId={myPlayerId}
 						connected={connected}
-						onRematch={requestRematch}
 						onLeaveRoom={handleLeaveRoom}
+						onSwitchTeam={switchTeam}
+						onToggleReady={toggleReady}
 					/>
 				</div>
 				<div className="shrink-0 w-full lg:absolute lg:left-2 lg:bottom-2 lg:w-80">

@@ -139,8 +139,8 @@ const SettingsPage = () => {
             <img
               alt="Avatar"
               className="size-full object-cover"
-              src={avatarPreview || user?.avatar || "/profile.png"}
-              onError={(e) => { (e.target as HTMLImageElement).src = "/profile.png"; }}
+              src={avatarPreview || user?.avatar || "/profile.jpg"}
+              onError={(e) => { (e.target as HTMLImageElement).src = "/profile.jpg"; }}
             />
             <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100 transition-opacity">
               <span className="material-symbols-outlined text-white text-xl">photo_camera</span>
@@ -163,8 +163,8 @@ const SettingsPage = () => {
             <img
               alt="Banner"
               className="h-full w-full object-cover"
-              src={bannerPreview || "/banner.png"}
-              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+              src={bannerPreview || "/banner.jpg"}
+              onError={(e) => { (e.target as HTMLImageElement).src = "/banner.jpg"; }}
             />
             <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100 transition-opacity">
               <span className="material-symbols-outlined text-white text-2xl">photo_camera</span>

@@ -22,7 +22,6 @@ services:
       - frontend
       - auth_service
       - game_service
-      - ai_service
       - chat_service
     networks:
       - frontend_net
@@ -31,10 +30,13 @@ services:
 
   # ========== 2. Frontend (React SPA) ==========
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    image: node:20-alpine
     container_name: ft_frontend
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: sh -c "npm install --silent && npm run dev"
     networks:
       - frontend_net
     restart: unless-stopped
@@ -93,16 +95,16 @@ services:
     restart: unless-stopped
 
   # ========== 6. AI Service (FastAPI + Uvicorn) ==========
-  ai_service:
-    build:
-      context: ./ai_service
-      dockerfile: Dockerfile
-    container_name: ft_ai
-    env_file:
-      - .env
-    networks:
-      - backend_net
-    restart: unless-stopped
+  # ai_service:
+  #   build:
+  #     context: ./ai_service
+  #     dockerfile: Dockerfile
+  #   container_name: ft_ai
+  #   env_file:
+  #     - .env
+  #   networks:
+  #     - backend_net
+  #   restart: unless-stopped
 
   # ========== Databases & Infrastructure ==========
 

@@ -6,6 +6,7 @@ export interface PlayerState {
   team:   TeamColor;
   x:      number;
   y:      number;
+  ready?: boolean;
 }
 
 export interface BallState {
@@ -18,23 +19,33 @@ export interface ScoreState {
   blue: number;
 }
 
+export interface LobbyPlayer {
+  id: string;
+  clientId: string;
+  team: TeamColor;
+  ready: boolean;
+}
+
+export interface LobbyState {
+  players: LobbyPlayer[];
+  teamsEqual: boolean;
+  allReady: boolean;
+  canStart: boolean;
+  readyCount: number;
+  totalCount: number;
+}
+
 export interface MatchState {
   redTeamName:  string;
   blueTeamName: string;
   round:        number;
   timeLeft:     number; // seconds
-  status: "waiting" | "in_progress" | "finished";
+  status: "lobby" | "in_progress" | "finished";
   endReason: string | null;
   winnerTeam: TeamColor | null;
   loserTeam: TeamColor | null;
   forfeitTeam: TeamColor | null;
   disconnectedTeam: TeamColor | null;
-  rematch: {
-    acceptedCount: number;
-    requiredCount: number;
-    requestedPlayerIds: string[];
-    timeoutRemainingSeconds: number | null;
-  };
 }
 
 export interface RoomState {
@@ -56,5 +67,6 @@ export interface GameState {
   ball:    BallState;
   score:   ScoreState;
   match:   MatchState;
+  lobby:   LobbyState;
   room:    RoomState;
 }

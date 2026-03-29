@@ -90,8 +90,8 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'avatar', 'banner', 'online_status', 'friends']
-        read_only_fields = ['id', 'email']
+        fields = ['id', 'username', 'email', 'avatar', 'banner', 'online_status', 'last_seen', 'date_joined', 'friends']
+        read_only_fields = ['id', 'email', 'last_seen', 'date_joined']
 
 class FriendRequestSerializer(serializers.Serializer):
     user_id = serializers.IntegerField()

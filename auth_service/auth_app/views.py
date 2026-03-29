@@ -176,12 +176,10 @@ class UserStatsView(APIView):
             return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
         
         stats = PlayerStats.objects.get_or_create(user=user)[0]
-        
-        # Calculate ranking
-        total_players = User.objects.count()
-        higher_elo = User.objects.filter(elo_rating__gt=user.elo_rating).count()
-        ranking = higher_elo + 1
-        
+
+        higher_xp = PlayerStats.objects.filter(xp__gt=stats.xp).count()
+        ranking = higher_xp + 1
+
         return Response({
             'user_id': user.id,
             'username': user.username,
@@ -189,8 +187,8 @@ class UserStatsView(APIView):
             'wins': stats.wins,
             'losses': stats.losses,
             'win_rate': stats.win_rate,
-            'elo_rating': user.elo_rating,
-            'tier': user.tier,
+            'xp': stats.xp,
+            'level': stats.level,
             'ranking': ranking,
         })
 
@@ -205,11 +203,12 @@ class UserMatchHistoryView(APIView):
         except User.DoesNotExist:
             return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
         
-        limit = int(request.query_params.get('limit', 20))
+        limit = int(request.query_params.get('limit', 10))
+        offset = int(request.query_params.get('offset', 0))
 
         participations = MatchPlayer.objects.filter(
             user=user
-        ).select_related('match').order_by('-match__played_at')[:limit]
+        ).select_related('match').order_by('-match__played_at')[offset:offset + limit]
 
         result = []
         for mp in participations:
@@ -249,7 +248,8 @@ class UserMatchHistoryView(APIView):
                 'end_reason': match.end_reason
             })
 
-        return Response(result)
+        total = MatchPlayer.objects.filter(user=user).count()
+        return Response({'results': result, 'total': total})
 
 # ──────────────── User Achievements ────────────────
 class UserAchievementsView(APIView):
@@ -287,7 +287,7 @@ class LeaderboardView(APIView):
 
         users = User.objects.filter(
             stats__total_matches__gt=0
-        ).select_related('stats').order_by('-elo_rating')[:limit]
+        ).select_related('stats').order_by('-stats__xp')[:limit]
 
         result = []
         for rank, user in enumerate(users, 1):
@@ -296,11 +296,11 @@ class LeaderboardView(APIView):
                 'user_id': user.id,
                 'username': user.username,
                 'avatar': user.avatar.url if user.avatar else None,
-                'elo_rating': user.elo_rating,
-                'tier': user.tier,
+                'xp': user.stats.xp,
+                'level': user.stats.level,
                 'total_matches': user.stats.total_matches,
                 'wins': user.stats.wins,
-                'win_rate': user.stats.win_rate
+                'win_rate': user.stats.win_rate,
             })
         
         return Response(result)
@@ -568,27 +568,88 @@ class MatchResultView(APIView):
         winner_ids = red_player_ids if winner_team == 'red' else blue_player_ids if winner_team == 'blue' else []
         loser_ids = blue_player_ids if winner_team == 'red' else red_player_ids if winner_team == 'blue' else []
 
+        XP_PER_GOAL = 10
+        XP_WIN_BONUS = 30
+        XP_DRAW_BONUS = 10
+
+        from django.utils import timezone
+
         for uid in all_ids:
             if uid not in users:
                 continue
-            stats, _ = PlayerStats.objects.get_or_create(user=users[uid])
+            user = users[uid]
+            stats, _ = PlayerStats.objects.get_or_create(user=user)
             stats.total_matches += 1
 
-            if uid in winner_ids:
+            is_red = uid in red_player_ids
+            team_score = score_red if is_red else score_blue
+            opponent_score = score_blue if is_red else score_red
+            is_winner = uid in winner_ids
+
+            if is_winner:
                 stats.wins += 1
+                stats.xp += team_score * XP_PER_GOAL + XP_WIN_BONUS
             elif uid in loser_ids:
                 stats.losses += 1
+                stats.xp += team_score * XP_PER_GOAL
             else:
                 stats.draws += 1
+                stats.xp += team_score * XP_PER_GOAL + XP_DRAW_BONUS
 
             if stats.total_matches > 0:
                 stats.win_rate = round(stats.wins / stats.total_matches * 100, 1)
-            
-            from django.utils import timezone
+
             stats.last_match_date = timezone.now()
             stats.save()
-        
+
+            self._grant_achievements(user, stats, is_winner, opponent_score)
+
         return Response(
             {'detail': 'Match recorded.', 'match_id': match.id},
             status=status.HTTP_201_CREATED
         )
+
+    def _grant_achievements(self, user, stats, is_winner, opponent_score):
+        ACHIEVEMENTS = [
+            {
+                'badge_type': 'first_win',
+                'name': 'İlk Galibiyet',
+                'description': 'İlk maçını kazan.',
+                'icon_url': 'verified',
+                'condition': lambda: is_winner and stats.wins == 1,
+            },
+            {
+                'badge_type': 'perfect_win',
+                'name': 'Kusursuz Galibiyet',
+                'description': 'Rakibe gol attırmadan kazan.',
+                'icon_url': 'emoji_events',
+                'condition': lambda: is_winner and opponent_score == 0,
+            },
+            {
+                'badge_type': 'streak_5',
+                'name': '5 Galibiyet Serisi',
+                'description': 'Üst üste 5 maç kazan.',
+                'icon_url': 'local_fire_department',
+                'condition': lambda: stats.wins >= 5 and stats.wins % 5 == 0,
+            },
+            {
+                'badge_type': 'unstoppable',
+                'name': 'Durdurulamaz',
+                'description': '20 galibiyet serisine ulaş.',
+                'icon_url': 'local_fire_department',
+                'condition': lambda: stats.wins >= 20 and stats.wins % 20 == 0,
+            },
+        ]
+
+        for a in ACHIEVEMENTS:
+            if not a['condition']():
+                continue
+            achievement, _ = Achievement.objects.get_or_create(
+                badge_type=a['badge_type'],
+                defaults={
+                    'name': a['name'],
+                    'description': a['description'],
+                    'icon_url': a['icon_url'],
+                },
+            )
+            UserAchievement.objects.get_or_create(user=user, achievement=achievement)

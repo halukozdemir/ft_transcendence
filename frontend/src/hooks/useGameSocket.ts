@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
-import type { GameState, PlayerState, BallState } from "../types/game";
+import type { GameState, PlayerState, BallState, LobbyState } from "../types/game";
 import { FX, FY, FW, FH } from "../constants/game";
 
 // Backend field dimensions
@@ -8,7 +8,6 @@ const SERVER_W = 800;
 const SERVER_H = 500;
 
 // How far behind real-time we render (ms).
-// Absorbs WiFi jitter by always having 2+ snapshots to interpolate between.
 const INITIAL_RENDER_DELAY = 100;
 
 function transformState(raw: any): GameState {
@@ -18,12 +17,29 @@ function transformState(raw: any): GameState {
     team: p.team as "red" | "blue",
     x: FX + (p.x / SERVER_W) * FW,
     y: FY + (p.y / SERVER_H) * FH,
+    ready: Boolean(p.ready),
   }));
-  
+
   const room = raw.room || {};
   const playerCount = Number(room.playerCount ?? players.length ?? 0);
   const maxPlayers = Number(room.maxPlayers ?? 2);
   const availableSlots = Number(room.availableSlots ?? Math.max(0, maxPlayers - playerCount));
+
+  const lobby: LobbyState = raw.lobby ? {
+    players: Array.isArray(raw.lobby.players) ? raw.lobby.players : [],
+    teamsEqual: Boolean(raw.lobby.teamsEqual),
+    allReady: Boolean(raw.lobby.allReady),
+    canStart: Boolean(raw.lobby.canStart),
+    readyCount: Number(raw.lobby.readyCount ?? 0),
+    totalCount: Number(raw.lobby.totalCount ?? 0),
+  } : {
+    players: [],
+    teamsEqual: false,
+    allReady: false,
+    canStart: false,
+    readyCount: 0,
+    totalCount: 0,
+  };
 
   return {
     players,
@@ -37,21 +53,14 @@ function transformState(raw: any): GameState {
       blueTeamName: "Blue",
       round: 1,
       timeLeft: raw.match?.timeRemainingSeconds ?? 0,
-      status: raw.match?.status ?? "waiting",
+      status: raw.match?.status ?? "lobby",
       endReason: raw.match?.endReason ?? null,
       winnerTeam: raw.match?.winnerTeam ?? null,
       loserTeam: raw.match?.loserTeam ?? null,
       forfeitTeam: raw.match?.forfeitTeam ?? null,
       disconnectedTeam: raw.match?.disconnectedTeam ?? null,
-      rematch: {
-        acceptedCount: Number(raw.match?.rematch?.acceptedCount ?? 0),
-        requiredCount: Number(raw.match?.rematch?.requiredCount ?? playerCount),
-        requestedPlayerIds: Array.isArray(raw.match?.rematch?.requestedPlayerIds)
-          ? raw.match.rematch.requestedPlayerIds.map(String)
-          : [],
-        timeoutRemainingSeconds: raw.match?.rematch?.timeoutRemainingSeconds ?? null,
-      },
     },
+    lobby,
     room: {
       id: room.id ?? null,
       playerCount,
@@ -59,8 +68,8 @@ function transformState(raw: any): GameState {
       availableSlots,
       isFull: Boolean(room.isFull ?? playerCount >= maxPlayers),
       teams: {
-        red: Number(room.teams?.red ?? players.filter((p) => p.team === "red").length),
-        blue: Number(room.teams?.blue ?? players.filter((p) => p.team === "blue").length),
+        red: Number(room.teams?.red ?? players.filter((p: any) => p.team === "red").length),
+        blue: Number(room.teams?.blue ?? players.filter((p: any) => p.team === "blue").length),
       },
       minPlayersPerTeam: Number(room.minPlayersPerTeam ?? 1),
       maxPlayersPerTeam: Number(room.maxPlayersPerTeam ?? Math.max(1, Math.ceil(maxPlayers / 2))),
@@ -70,7 +79,7 @@ function transformState(raw: any): GameState {
 
 interface Snapshot {
   state: GameState;
-  time: number; // Server time in MS
+  time: number;
 }
 
 interface UseGameSocketOptions {
@@ -104,6 +113,7 @@ function interpolate(from: GameState, to: GameState, t: number): GameState {
     } as BallState,
     score: to.score,
     match: to.match,
+    lobby: to.lobby,
     room: to.room,
   };
 }
@@ -120,7 +130,6 @@ export function useGameSocket(accessToken?: string | null, options: UseGameSocke
   const packetTimesRef = useRef<number[]>([]);
   const lastRawRef = useRef<any>(null);
 
-  // For server clock sync
   const serverOffsetRef = useRef<number | null>(null);
   const joinedRef = useRef(false);
 
@@ -224,7 +233,6 @@ export function useGameSocket(accessToken?: string | null, options: UseGameSocke
         const currentServerTime = performance.now() + offset;
         const renderTime = currentServerTime - renderDelayRef.current;
 
-        // Find two snapshots straddling renderTime
         let from: Snapshot | null = null;
         let to: Snapshot | null = null;
 
@@ -237,7 +245,6 @@ export function useGameSocket(accessToken?: string | null, options: UseGameSocke
         }
 
         if (from && to) {
-          // Interpolate between the two snapshots
           const total = to.time - from.time;
           const elapsed = renderTime - from.time;
           const t = total > 0 ? elapsed / total : 1;
@@ -245,21 +252,16 @@ export function useGameSocket(accessToken?: string | null, options: UseGameSocke
         } else if (buffer.length > 0) {
           const latest = buffer[buffer.length - 1];
           if (renderTime > latest.time) {
-            // Ahead of buffer — show latest state
             setState(latest.state);
           } else if (renderTime < buffer[0].time) {
-             // Behind buffer — show oldest state
              setState(buffer[0].state);
           }
         }
 
-        // Discard snapshots we'll never need again
-        // Keep at least 2 to avoid flicker if buffer is small
         while (buffer.length > 5 && buffer[1].time < renderTime) {
           buffer.shift();
         }
       } else if (buffer.length === 1) {
-        // Only one snapshot so far — show it immediately
         setState(buffer[0].state);
       }
 
@@ -289,9 +291,13 @@ export function useGameSocket(accessToken?: string | null, options: UseGameSocke
     getLastRaw: () => lastRawRef.current,
   };
 
-  const requestRematch = () => {
-    socketRef.current?.emit("rematch_request");
+  const switchTeam = () => {
+    socketRef.current?.emit("switch_team");
   };
 
-  return { state, myPlayerId, connected, joinError, socket: socketRef, debug, requestRematch };
+  const toggleReady = () => {
+    socketRef.current?.emit("toggle_ready");
+  };
+
+  return { state, myPlayerId, connected, joinError, socket: socketRef, debug, switchTeam, toggleReady };
 }

@@ -1,57 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import AppIcon from "../../components/ui/AppIcon";
-import { gameApi } from "../../services/gameApi";
+import { gameApi, type LeaderboardEntry } from "../../services/gameApi";
 
-interface LeaderboardEntry {
-  rank: number;
-  user_id: number;
-  username: string;
-  avatar: string;
-  elo_rating: number;
-  tier: string;
-  total_matches: number;
-  wins: number;
-}
-
-const MOCK_ALL_TIME: LeaderboardEntry[] = [
-  { rank: 1,  user_id: 1,  username: "SniperKing",    avatar: "", elo_rating: 2840, tier: "diamond",  total_matches: 312, wins: 248 },
-  { rank: 2,  user_id: 2,  username: "GhostKeeper",   avatar: "", elo_rating: 2710, tier: "diamond",  total_matches: 289, wins: 221 },
-  { rank: 3,  user_id: 3,  username: "BallerKilla",   avatar: "", elo_rating: 2650, tier: "diamond",  total_matches: 275, wins: 198 },
-  { rank: 4,  user_id: 4,  username: "CaptainKick",   avatar: "", elo_rating: 2480, tier: "platinum", total_matches: 201, wins: 142 },
-  { rank: 5,  user_id: 5,  username: "Baller99",      avatar: "", elo_rating: 2310, tier: "platinum", total_matches: 188, wins: 124 },
-  { rank: 6,  user_id: 6,  username: "TheWall",       avatar: "", elo_rating: 2190, tier: "gold",     total_matches: 165, wins: 103 },
-  { rank: 7,  user_id: 7,  username: "ChillZone",     avatar: "", elo_rating: 2050, tier: "gold",     total_matches: 144, wins: 88  },
-  { rank: 8,  user_id: 8,  username: "ProPlayer_99",  avatar: "", elo_rating: 1920, tier: "gold",     total_matches: 130, wins: 74  },
-  { rank: 9,  user_id: 9,  username: "SpeedDemon",    avatar: "", elo_rating: 1750, tier: "silver",   total_matches: 112, wins: 58  },
-  { rank: 10, user_id: 10, username: "IronFoot",      avatar: "", elo_rating: 1620, tier: "silver",   total_matches: 98,  wins: 47  },
-  { rank: 11, user_id: 11, username: "FlashStep",     avatar: "", elo_rating: 1540, tier: "silver",   total_matches: 91,  wins: 43  },
-  { rank: 12, user_id: 12, username: "NightOwl",      avatar: "", elo_rating: 1460, tier: "silver",   total_matches: 87,  wins: 39  },
-  { rank: 13, user_id: 13, username: "TurboKick",     avatar: "", elo_rating: 1380, tier: "bronze",   total_matches: 74,  wins: 31  },
-  { rank: 14, user_id: 14, username: "QuickPass",     avatar: "", elo_rating: 1290, tier: "bronze",   total_matches: 68,  wins: 26  },
-  { rank: 15, user_id: 15, username: "DribbleMaster", avatar: "", elo_rating: 1210, tier: "bronze",   total_matches: 61,  wins: 22  },
-  { rank: 16, user_id: 16, username: "AceShot",       avatar: "", elo_rating: 1140, tier: "bronze",   total_matches: 55,  wins: 18  },
-  { rank: 17, user_id: 17, username: "SoloWing",      avatar: "", elo_rating: 1060, tier: "bronze",   total_matches: 49,  wins: 15  },
-  { rank: 18, user_id: 18, username: "ColdBlood",     avatar: "", elo_rating: 980,  tier: "bronze",   total_matches: 42,  wins: 12  },
-  { rank: 19, user_id: 19, username: "Rookie_X",      avatar: "", elo_rating: 890,  tier: "bronze",   total_matches: 35,  wins: 9   },
-  { rank: 20, user_id: 20, username: "NewbieKick",    avatar: "", elo_rating: 810,  tier: "bronze",   total_matches: 28,  wins: 6   },
-];
-
-const MOCK_MONTHLY: LeaderboardEntry[] = [
-  { rank: 1,  user_id: 7,  username: "ChillZone",     avatar: "", elo_rating: 420,  tier: "gold",     total_matches: 38, wins: 31 },
-  { rank: 2,  user_id: 3,  username: "BallerKilla",   avatar: "", elo_rating: 395,  tier: "diamond",  total_matches: 34, wins: 27 },
-  { rank: 3,  user_id: 11, username: "FlashStep",     avatar: "", elo_rating: 370,  tier: "silver",   total_matches: 31, wins: 24 },
-  { rank: 4,  user_id: 1,  username: "SniperKing",    avatar: "", elo_rating: 340,  tier: "diamond",  total_matches: 28, wins: 21 },
-  { rank: 5,  user_id: 15, username: "DribbleMaster", avatar: "", elo_rating: 310,  tier: "bronze",   total_matches: 25, wins: 18 },
-  { rank: 6,  user_id: 9,  username: "SpeedDemon",    avatar: "", elo_rating: 280,  tier: "silver",   total_matches: 22, wins: 15 },
-  { rank: 7,  user_id: 4,  username: "CaptainKick",   avatar: "", elo_rating: 255,  tier: "platinum", total_matches: 20, wins: 13 },
-  { rank: 8,  user_id: 19, username: "Rookie_X",      avatar: "", elo_rating: 220,  tier: "bronze",   total_matches: 18, wins: 11 },
-  { rank: 9,  user_id: 6,  username: "TheWall",       avatar: "", elo_rating: 195,  tier: "gold",     total_matches: 16, wins: 9  },
-  { rank: 10, user_id: 13, username: "TurboKick",     avatar: "", elo_rating: 170,  tier: "bronze",   total_matches: 14, wins: 7  },
-];
-
-const PAGE_SIZE = 7;
-
+const PAGE_SIZE = 10;
 
 const podiumColor = [
   "bg-yellow-500/20 border-yellow-500/40 text-yellow-400",
@@ -68,50 +20,33 @@ const Avatar = ({ entry }: { entry: LeaderboardEntry }) => (
   </div>
 );
 
-type Tab = "alltime" | "monthly";
-
 const LeaderboardPage = () => {
   const navigate = useNavigate();
-  const [tab, setTab] = useState<Tab>("alltime");
-  const [allTimeData, setAllTimeData] = useState<LeaderboardEntry[]>(MOCK_ALL_TIME);
-  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<LeaderboardEntry[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
 
-  const leaderboard = tab === "alltime" ? allTimeData : MOCK_MONTHLY;
-
   useEffect(() => {
-    const fetchLeaderboard = async () => {
-      try {
-        setLoading(true);
-        const data = await gameApi.getLeaderboard(100);
-        if (data?.length) setAllTimeData(data);
-      } catch {
-        // mock data kullanılmaya devam eder
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchLeaderboard();
+    gameApi.getLeaderboard(100)
+      .then((res) => setData(res))
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
-  // Arama değişince sayfayı sıfırla
   const handleSearch = (val: string) => {
     setSearch(val);
     setPage(1);
   };
 
-  const top3 = leaderboard.slice(0, 3);
+  const top3 = data.slice(0, 3);
 
   const filtered = useMemo(
-    () => leaderboard.filter((e) =>
-      e.username.toLowerCase().includes(search.toLowerCase())
-    ),
-    [leaderboard, search]
+    () => data.filter((e) => e.username.toLowerCase().includes(search.toLowerCase())),
+    [data, search]
   );
 
-  // Arama varsa tüm sonuçları, yoksa top3 hariç kalanları paginate et
-  const tableData = search ? filtered : leaderboard.slice(3);
+  const tableData = search ? filtered : data.slice(3);
   const totalPages = Math.max(1, Math.ceil(tableData.length / PAGE_SIZE));
   const paginated = tableData.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
@@ -119,9 +54,9 @@ const LeaderboardPage = () => {
     <div className="px-4 py-8 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold text-white mb-8">Liderlik Tablosu</h1>
 
-      {/* Top 3 Podium — sadece arama yokken */}
-      {!search && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+      {/* Top 3 Podium */}
+      {!search && top3.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
           {[top3[1], top3[0], top3[2]].map((entry, i) => {
             if (!entry) return <div key={i} />;
             const podiumIndex = entry.rank - 1;
@@ -140,7 +75,7 @@ const LeaderboardPage = () => {
                   }
                 </div>
                 <p className="text-sm font-bold text-white truncate max-w-full">{entry.username}</p>
-                <p className="text-xs text-slate-400">{entry.elo_rating} puan</p>
+                <p className="text-xs text-slate-400">{entry.xp.toLocaleString()} XP</p>
                 <div className={`w-full ${sizes[i]} rounded-xl border flex items-center justify-center text-2xl font-black ${podiumColor[podiumIndex]}`}>
                   #{entry.rank}
                 </div>
@@ -149,25 +84,6 @@ const LeaderboardPage = () => {
           })}
         </div>
       )}
-
-      {/* Tab Switcher */}
-      <div className="flex gap-1 rounded-lg border border-white/10 p-1 w-full mb-6">
-        {(["alltime", "monthly"] as Tab[]).map((t) => (
-          <button
-            key={t}
-            className={[
-              "cursor-pointer flex-1 rounded py-2 text-sm font-semibold transition-colors",
-              tab === t
-                ? "bg-(--dashboard-primary) text-white"
-                : "text-slate-400 hover:text-white",
-            ].join(" ")}
-            onClick={() => { setTab(t); setPage(1); setSearch(""); }}
-            type="button"
-          >
-            {t === "alltime" ? "Tüm Zamanlar" : "Bu Ay"}
-          </button>
-        ))}
-      </div>
 
       {/* Tablo */}
       <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
@@ -191,9 +107,10 @@ const LeaderboardPage = () => {
         {/* Header */}
         <div className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-white/10">
           <div className="col-span-1 text-xs font-bold text-slate-500 uppercase">Sıra</div>
-          <div className="col-span-5 text-xs font-bold text-slate-500 uppercase">Oyuncu</div>
-          <div className="col-span-3 text-xs font-bold text-slate-500 uppercase">Puan</div>
-          <div className="col-span-3 text-xs font-bold text-slate-500 uppercase text-right">G / T</div>
+          <div className="col-span-4 text-xs font-bold text-slate-500 uppercase">Oyuncu</div>
+          <div className="col-span-2 text-xs font-bold text-slate-500 uppercase">Seviye</div>
+          <div className="col-span-3 text-xs font-bold text-slate-500 uppercase">XP</div>
+          <div className="col-span-2 text-xs font-bold text-slate-500 uppercase text-right">G / T</div>
         </div>
 
         {/* Rows */}
@@ -201,9 +118,9 @@ const LeaderboardPage = () => {
           ? Array.from({ length: PAGE_SIZE }).map((_, i) => (
               <div key={i} className="grid grid-cols-12 gap-4 px-5 py-4 border-b border-white/5 animate-pulse">
                 <div className="col-span-1 h-4 bg-white/10 rounded" />
-                <div className="col-span-5 h-4 bg-white/10 rounded" />
+                <div className="col-span-4 h-4 bg-white/10 rounded" />
                 <div className="col-span-2 h-4 bg-white/10 rounded" />
-                <div className="col-span-2 h-4 bg-white/10 rounded" />
+                <div className="col-span-3 h-4 bg-white/10 rounded" />
                 <div className="col-span-2 h-4 bg-white/10 rounded" />
               </div>
             ))
@@ -217,14 +134,17 @@ const LeaderboardPage = () => {
                 <div className="col-span-1 flex items-center">
                   <span className="text-sm font-semibold text-slate-400">#{entry.rank}</span>
                 </div>
-                <div className="col-span-5 flex items-center gap-3 min-w-0">
+                <div className="col-span-4 flex items-center gap-3 min-w-0">
                   <Avatar entry={entry} />
                   <span className="truncate text-sm font-semibold text-white">{entry.username}</span>
                 </div>
-                <div className="col-span-3 flex items-center">
-                  <span className="text-sm font-bold text-(--dashboard-primary)">{entry.elo_rating}</span>
+                <div className="col-span-2 flex items-center">
+                  <span className="text-sm font-bold text-slate-300">Lvl {entry.level}</span>
                 </div>
-                <div className="col-span-3 flex items-center justify-end gap-2 text-sm">
+                <div className="col-span-3 flex items-center">
+                  <span className="text-sm font-bold text-(--dashboard-primary)">{entry.xp.toLocaleString()} XP</span>
+                </div>
+                <div className="col-span-2 flex items-center justify-end gap-2 text-sm">
                   <span className="font-semibold text-green-400">{entry.wins}G</span>
                   <span className="text-slate-600">/</span>
                   <span className="text-slate-400">{entry.total_matches}</span>
@@ -259,9 +179,7 @@ const LeaderboardPage = () => {
                   key={p}
                   className={[
                     "cursor-pointer size-8 rounded-lg text-sm font-bold transition-colors",
-                    p === page
-                      ? "bg-(--dashboard-primary) text-white"
-                      : "text-slate-400 hover:text-white hover:bg-white/5",
+                    p === page ? "bg-(--dashboard-primary) text-white" : "text-slate-400 hover:text-white hover:bg-white/5",
                   ].join(" ")}
                   onClick={() => setPage(p)}
                   type="button"

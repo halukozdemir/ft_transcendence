@@ -27,6 +27,40 @@ const usedEmptyRoomGraceMs = Number.isFinite(usedEmptyRoomGraceRaw) && usedEmpty
   ? usedEmptyRoomGraceRaw
   : DEFAULT_USED_EMPTY_ROOM_GRACE_MS;
 const JWT_SECRET = process.env.JWT_SECRET_KEY || process.env.JWT_SECRET || "dev-secret-key";
+const SERVICE_SECRET = process.env.SERVICE_SECRET || "";
+const AUTH_SERVICE_URL = "http://auth_service:8000";
+
+async function reportMatchResult(data) {
+  const body = JSON.stringify({
+    winner_team: data.winnerTeam,
+    score_red: data.scoreRed,
+    score_blue: data.scoreBlue,
+    duration_seconds: data.durationSeconds,
+    red_player_ids: data.redPlayerIds,
+    blue_player_ids: data.bluePlayerIds,
+    end_reason: data.endReason,
+  });
+
+  try {
+    const res = await fetch(`${AUTH_SERVICE_URL}/api/auth/match-result/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Service-Secret": SERVICE_SECRET,
+        "X-Forwarded-Host": "auth-service",
+      },
+      body,
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      console.error(`Match result report failed: ${res.status} ${text}`);
+    } else {
+      console.log("Match result reported successfully");
+    }
+  } catch (err) {
+    console.error("Match result report error:", err.message);
+  }
+}
 
 // Health check
 app.get("/api/game/health/", (req, res) => {
@@ -220,20 +254,6 @@ app.post("/api/game/rooms/:roomId/validate-password/", (req, res) => {
   return res.json({ valid, requiresPassword: true });
 });
 
-function handleRematchTimeout(roomId) {
-  const room = rooms.get(roomId);
-  if (room) {
-    // Disconnect all remaining sockets in the room
-    const sockets = io.sockets.sockets;
-    for (const [socketId, socket] of sockets) {
-      if (socketRoom.get(socketId) === roomId) {
-        socket.disconnect(true);
-      }
-    }
-    console.log(`Rematch timeout: odadaki oyuncular lobiye atıldı. Room: ${roomId}`);
-  }
-}
-
 function createRoom(options = {}) {
   const roomId = `room_${++roomCounter}`;
   const room = new GameRoom({
@@ -245,7 +265,7 @@ function createRoom(options = {}) {
     title: options.title,
     isLocked: Boolean(options.isLocked),
     password: typeof options.password === "string" ? options.password : "",
-    onRematchTimeout: () => handleRematchTimeout(roomId),
+    onMatchFinished: (data) => reportMatchResult(data),
   });
   room.id = roomId;
   room.emptySince = Date.now();
@@ -258,7 +278,7 @@ function createRoom(options = {}) {
 function findJoinableRoom() {
   for (const [, room] of rooms) {
     if (
-      (room.match.status === "waiting" || room.match.status === "in_progress") &&
+      room.match.status === "lobby" &&
       !room.requiresPassword() &&
       room.playerCount < room.getMatchCapacity()
     ) {
@@ -387,16 +407,30 @@ io.on("connection", (socket) => {
     if (r) r.forfeit(socket.id);
   });
 
-  socket.on("rematch_request", () => {
+  socket.on("switch_team", () => {
     const roomIdForSocket = socketRoom.get(socket.id);
     const r = rooms.get(roomIdForSocket);
     if (!r) return;
 
-    r.requestRematch(socket.id);
-    io.to(roomIdForSocket).emit("state", r.getState());
-    
-    // Cleanup empty room if rematch timeout kicked non-responding players
-    cleanupRoom(roomIdForSocket);
+    const result = r.switchTeam(socket.id);
+    if (result.ok) {
+      io.to(roomIdForSocket).emit("state", r.getState());
+    } else {
+      socket.emit("action_error", { action: "switch_team", reason: result.reason });
+    }
+  });
+
+  socket.on("toggle_ready", () => {
+    const roomIdForSocket = socketRoom.get(socket.id);
+    const r = rooms.get(roomIdForSocket);
+    if (!r) return;
+
+    const result = r.toggleReady(socket.id);
+    if (result.ok) {
+      io.to(roomIdForSocket).emit("state", r.getState());
+    } else {
+      socket.emit("action_error", { action: "toggle_ready", reason: result.reason });
+    }
   });
 
   socket.on("debug:config", (config) => {

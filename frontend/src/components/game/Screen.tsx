@@ -7,24 +7,17 @@ interface Props {
   state:      GameState | null;
   myPlayerId: string | null;
   connected?: boolean;
-  onRematch?: () => void;
   onLeaveRoom?: () => void;
+  onSwitchTeam?: () => void;
+  onToggleReady?: () => void;
 }
 
-export default function Screen({ state, myPlayerId, connected = false, onRematch, onLeaveRoom }: Props) {
+export default function Screen({ state, myPlayerId, connected = false, onLeaveRoom, onSwitchTeam, onToggleReady }: Props) {
   const myTeam = state?.players.find((p) => p.id === myPlayerId)?.team;
   const isFinished = state?.match.status === "finished";
+  const isLobby = state?.match.status === "lobby";
+  const isInProgress = state?.match.status === "in_progress";
   const winnerTeam = state?.match.winnerTeam;
-  const hasMissingTeam = Boolean(state && (state.room.teams.red === 0 || state.room.teams.blue === 0));
-  const isWaitingForOpponent = Boolean(
-    state
-    && !isFinished
-    && state.match.status !== "in_progress"
-    && state.room.playerCount > 0
-    && (state.match.endReason === "opponent_missing" || hasMissingTeam)
-  );
-  const missingTeamLabel = state?.room.teams.red === 0 ? "Kırmızı" : "Mavi";
-  const rematchAccepted = Boolean(state?.match.rematch.requestedPlayerIds.includes(myPlayerId || ""));
 
   const winnerLabel = !winnerTeam
     ? "Berabere"
@@ -34,38 +27,37 @@ export default function Screen({ state, myPlayerId, connected = false, onRematch
 
   const iWon = Boolean(myTeam && winnerTeam && myTeam === winnerTeam);
 
-  // Countdown timer for rematch timeout
-  const [countdown, setCountdown] = useState<number | null>(null);
+  // Check if current player is ready
+  const myLobbyPlayer = state?.lobby.players.find((p) => p.id === myPlayerId);
+  const amReady = myLobbyPlayer?.ready ?? false;
+
+  // Check if my team's opponent team is full (for switch button)
+  const otherTeam = myTeam === "red" ? "blue" : "red";
+  const otherTeamCount = state?.room.teams[otherTeam] ?? 0;
+  const otherTeamMax = state?.room.maxPlayersPerTeam ?? 1;
+  const canSwitch = otherTeamCount < otherTeamMax;
+
+  // Countdown for returning to lobby after match end
+  const [returnCountdown, setReturnCountdown] = useState<number | null>(null);
 
   useEffect(() => {
-    const timeout = state?.match.rematch.timeoutRemainingSeconds;
-    if (timeout && timeout > 0) {
-      setCountdown(timeout);
+    if (isFinished) {
+      setReturnCountdown(5);
       const interval = setInterval(() => {
-        setCountdown((prev) => (prev && prev > 0 ? prev - 1 : null));
+        setReturnCountdown((prev) => (prev && prev > 0 ? prev - 1 : null));
       }, 1000);
       return () => clearInterval(interval);
     } else {
-      setCountdown(null);
+      setReturnCountdown(null);
     }
-  }, [state?.match.rematch.timeoutRemainingSeconds]);
-
-  // Auto-leave room when rematch timeout expires
-  useEffect(() => {
-    if (countdown === 0) {
-      const timer = setTimeout(() => {
-        onLeaveRoom?.();
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [countdown, onLeaveRoom]);
+  }, [isFinished]);
 
   return (
     <div className="w-full h-full bg-bg overflow-hidden rounded-xl p-2 gap-2"
       style={{ display: "grid", gridTemplateRows: state ? "auto 1fr" : "1fr" }}
     >
-      {/* ── Scoreboard ── */}
-      {state && (
+      {/* Scoreboard - only during match or finished */}
+      {state && (isInProgress || isFinished) && (
         <div className="flex flex-col items-center gap-2">
           <Scoreboard score={state.score} match={state.match} />
           <div className="flex flex-wrap items-center justify-center gap-2 text-[11px]">
@@ -75,23 +67,29 @@ export default function Screen({ state, myPlayerId, connected = false, onRematch
             <span className="px-2 py-1 rounded bg-surface border border-border text-white/80">
               Oyuncu: {state.room.playerCount}/{state.room.maxPlayers}
             </span>
-            <span className={`px-2 py-1 rounded border ${state.room.isFull ? "bg-red-500/15 border-red-500/40 text-red-300" : "bg-green-500/15 border-green-500/40 text-green-300"}`}>
-              {state.room.isFull ? "Oda Dolu" : `Açık (${state.room.availableSlots} boş)`}
+          </div>
+        </div>
+      )}
+
+      {/* Lobby header */}
+      {state && isLobby && (
+        <div className="flex flex-col items-center gap-1">
+          <h2 className="text-lg font-bold text-white">Lobi</h2>
+          <div className="flex flex-wrap items-center justify-center gap-2 text-[11px]">
+            <span className="px-2 py-1 rounded bg-surface border border-border text-white/80">
+              Oda: {state.room.id ?? "-"}
             </span>
-            <span className="px-2 py-1 rounded bg-team-red/15 border border-team-red/40 text-team-red">
-              Kırmızı: {state.room.teams.red}
-            </span>
-            <span className="px-2 py-1 rounded bg-team-blue/15 border border-team-blue/40 text-team-blue">
-              Mavi: {state.room.teams.blue}
+            <span className="px-2 py-1 rounded bg-surface border border-border text-white/80">
+              Oyuncu: {state.room.playerCount}/{state.room.maxPlayers}
             </span>
           </div>
         </div>
       )}
 
-      {/* ── Canvas ── */}
+      {/* Canvas area */}
       <div className="relative overflow-hidden">
-        {/* Leave button - top right during gameplay */}
-        {state && !isWaitingForOpponent && !isFinished && (
+        {/* Leave button during gameplay */}
+        {state && isInProgress && (
           <div className="absolute top-2 right-2 z-[5]">
             <button
               type="button"
@@ -102,32 +100,137 @@ export default function Screen({ state, myPlayerId, connected = false, onRematch
             </button>
           </div>
         )}
-        
+
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="h-full aspect-12/7 max-w-full rounded-xl overflow-hidden">
             <GameCanvas state={state} myPlayerId={myPlayerId} />
           </div>
         </div>
 
-        {state && isWaitingForOpponent && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/40 backdrop-blur-[1px]">
-            <div className="w-[min(92%,420px)] rounded-2xl border border-border bg-surface/95 p-5 text-center shadow-xl">
-              <p className="text-xs uppercase tracking-[0.18em] text-white/60">Maç Durdu</p>
-              <h3 className="mt-2 text-2xl font-black text-system">Oyuncu Bekleniyor</h3>
-              <p className="mt-2 text-sm text-white/80">
-                {missingTeamLabel} takımından en az 1 oyuncu bağlanınca maç yeniden başlayacak.
-              </p>
-              <button
-                type="button"
-                onClick={onLeaveRoom}
-                className="mt-4 w-full rounded-xl border border-red-500/40 bg-red-500/15 px-4 py-2 text-sm font-semibold text-red-300 transition hover:bg-red-500/25"
-              >
-                Odadan Çık
-              </button>
+        {/* LOBBY OVERLAY */}
+        {state && isLobby && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 backdrop-blur-[2px]">
+            <div className="w-[min(95%,520px)] rounded-2xl border border-border bg-surface/95 p-5 shadow-xl">
+
+              {/* Teams side by side */}
+              <div className="grid grid-cols-2 gap-4">
+                {/* Red Team */}
+                <div className="rounded-xl border border-team-red/30 bg-team-red/5 p-3">
+                  <h3 className="text-center text-sm font-bold text-team-red mb-3">
+                    Kırmızı Takım ({state.room.teams.red}/{state.room.maxPlayersPerTeam})
+                  </h3>
+                  <div className="space-y-2">
+                    {state.lobby.players
+                      .filter((p) => p.team === "red")
+                      .map((p) => (
+                        <div
+                          key={p.id}
+                          className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm ${
+                            p.id === myPlayerId
+                              ? "bg-team-red/20 border border-team-red/40"
+                              : "bg-white/5"
+                          }`}
+                        >
+                          <span className="text-white/90 truncate">
+                            {p.clientId?.toString().slice(0, 8) || "Oyuncu"}
+                            {p.id === myPlayerId && " (Sen)"}
+                          </span>
+                          <span className={`text-xs font-semibold ${p.ready ? "text-green-400" : "text-white/40"}`}>
+                            {p.ready ? "HAZIR" : "Bekliyor"}
+                          </span>
+                        </div>
+                      ))}
+                    {Array.from({ length: state.room.maxPlayersPerTeam - state.room.teams.red }).map((_, i) => (
+                      <div key={`empty-red-${i}`} className="rounded-lg border border-dashed border-white/10 px-3 py-2 text-sm text-white/20 text-center">
+                        Boş Slot
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Blue Team */}
+                <div className="rounded-xl border border-team-blue/30 bg-team-blue/5 p-3">
+                  <h3 className="text-center text-sm font-bold text-team-blue mb-3">
+                    Mavi Takım ({state.room.teams.blue}/{state.room.maxPlayersPerTeam})
+                  </h3>
+                  <div className="space-y-2">
+                    {state.lobby.players
+                      .filter((p) => p.team === "blue")
+                      .map((p) => (
+                        <div
+                          key={p.id}
+                          className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm ${
+                            p.id === myPlayerId
+                              ? "bg-team-blue/20 border border-team-blue/40"
+                              : "bg-white/5"
+                          }`}
+                        >
+                          <span className="text-white/90 truncate">
+                            {p.clientId?.toString().slice(0, 8) || "Oyuncu"}
+                            {p.id === myPlayerId && " (Sen)"}
+                          </span>
+                          <span className={`text-xs font-semibold ${p.ready ? "text-green-400" : "text-white/40"}`}>
+                            {p.ready ? "HAZIR" : "Bekliyor"}
+                          </span>
+                        </div>
+                      ))}
+                    {Array.from({ length: state.room.maxPlayersPerTeam - state.room.teams.blue }).map((_, i) => (
+                      <div key={`empty-blue-${i}`} className="rounded-lg border border-dashed border-white/10 px-3 py-2 text-sm text-white/20 text-center">
+                        Boş Slot
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Status info */}
+              <div className="mt-4 rounded-xl border border-border bg-bg/60 px-3 py-2 text-center text-xs text-white/60">
+                {!state.lobby.teamsEqual && (
+                  <span>Takımlar eşit olmalı. </span>
+                )}
+                {state.lobby.teamsEqual && !state.lobby.allReady && (
+                  <span>Tüm oyuncular hazır olmalı. ({state.lobby.readyCount}/{state.lobby.totalCount} hazır)</span>
+                )}
+                {state.lobby.canStart && (
+                  <span className="text-green-400 font-semibold">Maç başlıyor...</span>
+                )}
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex gap-2 mt-4">
+                <button
+                  type="button"
+                  onClick={onSwitchTeam}
+                  disabled={!connected || !canSwitch}
+                  className="flex-1 rounded-xl border border-yellow-500/40 bg-yellow-500/15 px-4 py-2 text-sm font-semibold text-yellow-300 transition hover:bg-yellow-500/25 disabled:cursor-not-allowed disabled:border-border disabled:bg-bg/40 disabled:text-white/40"
+                >
+                  Takım Değiştir
+                </button>
+                <button
+                  type="button"
+                  onClick={onToggleReady}
+                  disabled={!connected}
+                  className={`flex-1 rounded-xl border px-4 py-2 text-sm font-semibold transition ${
+                    amReady
+                      ? "border-red-500/40 bg-red-500/15 text-red-300 hover:bg-red-500/25"
+                      : "border-green-500/40 bg-green-500/15 text-green-300 hover:bg-green-500/25"
+                  } disabled:cursor-not-allowed disabled:border-border disabled:bg-bg/40 disabled:text-white/40`}
+                >
+                  {amReady ? "Hazır Değilim" : "Hazırım"}
+                </button>
+                <button
+                  type="button"
+                  onClick={onLeaveRoom}
+                  className="rounded-xl border border-red-500/40 bg-red-500/15 px-4 py-2 text-sm font-semibold text-red-300 transition hover:bg-red-500/25"
+                >
+                  Çık
+                </button>
+              </div>
             </div>
           </div>
         )}
 
+        {/* MATCH FINISHED OVERLAY */}
         {state && isFinished && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/45 backdrop-blur-[1px]">
             <div className="w-[min(92%,420px)] rounded-2xl border border-border bg-surface/95 p-5 text-center shadow-xl">
@@ -139,41 +242,25 @@ export default function Screen({ state, myPlayerId, connected = false, onRematch
                 {winnerTeam ? (iWon ? "Tebrikler, senin takımın kazandı." : "Bu turu rakip takım aldı.") : "Skor eşit bitti."}
               </p>
 
-              <div className="mt-4 rounded-xl border border-border bg-bg/60 px-3 py-2 text-xs text-white/80">
-                <div className="flex items-center justify-between">
-                  <div>
-                    Rematch: <span className="font-semibold text-white">{state.match.rematch.acceptedCount}/{state.match.rematch.requiredCount}</span>
-                  </div>
-                  {countdown !== null && (
-                    <div className={`font-semibold ${countdown <= 10 ? "text-red-400" : "text-yellow-300"}`}>
-                      {countdown}s
-                    </div>
-                  )}
-                </div>
+              <div className="mt-4 rounded-xl border border-border bg-bg/60 px-3 py-2 text-xs text-white/60">
+                {returnCountdown !== null && returnCountdown > 0 ? (
+                  <span>{returnCountdown} saniye içinde lobiye dönülüyor...</span>
+                ) : (
+                  <span>Lobiye dönülüyor...</span>
+                )}
               </div>
 
-              <div className="flex gap-2 mt-4">
-                <button
-                  type="button"
-                  onClick={onRematch}
-                  disabled={!connected || rematchAccepted}
-                  className="flex-1 rounded-xl border border-system/40 bg-system/15 px-4 py-2 text-sm font-semibold text-system transition hover:bg-system/25 disabled:cursor-not-allowed disabled:border-border disabled:bg-bg/40 disabled:text-white/40"
-                >
-                  {!connected ? "Bağlantı bekleniyor" : rematchAccepted ? "Rematch onayın alındı" : "Rematch iste"}
-                </button>
-                <button
-                  type="button"
-                  onClick={onLeaveRoom}
-                  className="flex-1 rounded-xl border border-red-500/40 bg-red-500/15 px-4 py-2 text-sm font-semibold text-red-300 transition hover:bg-red-500/25"
-                >
-                  Odadan Çık
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={onLeaveRoom}
+                className="mt-4 w-full rounded-xl border border-red-500/40 bg-red-500/15 px-4 py-2 text-sm font-semibold text-red-300 transition hover:bg-red-500/25"
+              >
+                Odadan Çık
+              </button>
             </div>
           </div>
         )}
       </div>
-
     </div>
   );
 }

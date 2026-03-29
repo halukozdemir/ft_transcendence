@@ -33,18 +33,6 @@ class User(AbstractUser):
         related_name='blocked_by'
     )
     bio = models.TextField(max_length=500, blank=True)
-    elo_rating = models.IntegerField(default=1200)
-    tier = models.CharField(
-        max_length=20,
-        choices=[
-            ('bronze', 'Bronze'),
-            ('silver', 'Silver'),
-            ('gold', 'Gold'),
-            ('platinum', 'Platinum'),
-            ('diamond', 'Diamond'),
-        ],
-        default='bronze'
-    )
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
@@ -61,9 +49,14 @@ class PlayerStats(models.Model):
     losses = models.IntegerField(default=0)
     draws = models.IntegerField(default=0)
     win_rate = models.FloatField(default=0.0)
+    xp = models.IntegerField(default=0)
     last_match_date = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def level(self):
+        return self.xp // 100 + 1
 
     class Meta:
         verbose_name_plural = "Player Stats"

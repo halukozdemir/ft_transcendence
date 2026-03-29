@@ -29,6 +29,8 @@ export interface UserProfile {
   avatar: string;
   banner: string;
   online_status: boolean;
+  last_seen: string | null;
+  date_joined: string;
   friends: Array<{
     id: number;
     username: string;

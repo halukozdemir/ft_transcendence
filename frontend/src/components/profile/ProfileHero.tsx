@@ -6,12 +6,28 @@ interface ProfileHeroData {
   avatarUrl: string;
   bannerUrl: string;
   isOnline: boolean;
+  lastSeen: string | null;
+  dateJoined: string;
 }
 
 interface ProfileHeroProps {
   profile: ProfileHeroData;
   onAddFriend?: () => void;
   isOwnProfile?: boolean;
+}
+
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString("tr-TR", { year: "numeric", month: "long", day: "numeric" });
+}
+
+function lastSeenText(lastSeen: string | null, isOnline: boolean): string {
+  if (isOnline) return "Şu an çevrimiçi";
+  if (!lastSeen) return "Hiç görülmedi";
+  const diff = Math.floor((Date.now() - new Date(lastSeen).getTime()) / 1000);
+  if (diff < 60) return "Az önce çevrimdışı";
+  if (diff < 3600) return `${Math.floor(diff / 60)} dakika önce`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} saat önce`;
+  return `${Math.floor(diff / 86400)} gün önce`;
 }
 
 const ProfileHero = ({ profile, onAddFriend, isOwnProfile }: ProfileHeroProps) => {
@@ -23,6 +39,7 @@ const ProfileHero = ({ profile, onAddFriend, isOwnProfile }: ProfileHeroProps) =
           alt="Profile banner"
           className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700"
           src={profile.bannerUrl}
+          onError={(e) => { (e.target as HTMLImageElement).src = "/banner.jpg"; }}
         />
         <div className="absolute bottom-0 left-0 w-full p-6 sm:p-10 z-20 flex flex-col sm:flex-row items-end sm:items-center justify-between gap-6">
           <div className="flex items-center gap-6">
@@ -32,7 +49,7 @@ const ProfileHero = ({ profile, onAddFriend, isOwnProfile }: ProfileHeroProps) =
                   alt={profile.username}
                   className="w-full h-full object-cover"
                   src={profile.avatarUrl}
-                  onError={(e) => { (e.target as HTMLImageElement).src = "/profile.png"; }}
+                  onError={(e) => { (e.target as HTMLImageElement).src = "/profile.jpg"; }}
                 />
               </div>
               {profile.isOnline && (
@@ -46,6 +63,16 @@ const ProfileHero = ({ profile, onAddFriend, isOwnProfile }: ProfileHeroProps) =
               <p className="text-slate-300 text-sm sm:text-base mt-1">
                 Seviye {profile.level} • #{profile.rank.toLocaleString()} Küresel
               </p>
+              <div className="flex flex-wrap items-center gap-3 mt-2">
+                <span className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border ${profile.isOnline ? "bg-emerald-500/20 border-emerald-500/30 text-emerald-400" : "bg-white/5 border-white/10 text-slate-400"}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${profile.isOnline ? "bg-emerald-400" : "bg-slate-500"}`} />
+                  {lastSeenText(profile.lastSeen, profile.isOnline)}
+                </span>
+                <span className="flex items-center gap-1.5 text-xs text-slate-500">
+                  <span className="material-symbols-outlined text-sm">calendar_today</span>
+                  {formatDate(profile.dateJoined)} tarihinde katıldı
+                </span>
+              </div>
             </div>
           </div>
           <div className="flex gap-3 w-full sm:w-auto">

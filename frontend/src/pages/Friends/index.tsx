@@ -111,9 +111,9 @@ const FriendsPage = () => {
                   <img
                     alt={u.username}
                     className="w-full h-full object-cover"
-                    src={u.avatar || "/profile.png"}
+                    src={u.avatar || "/profile.jpg"}
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = "/profile.png";
+                      (e.target as HTMLImageElement).src = "/profile.jpg";
                     }}
                   />
                 </div>

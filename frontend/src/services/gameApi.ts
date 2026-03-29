@@ -44,10 +44,11 @@ export interface LeaderboardEntry {
   user_id: number;
   username: string;
   avatar: string;
-  elo_rating: number;
-  tier: string;
+  xp: number;
+  level: number;
   total_matches: number;
   wins: number;
+  win_rate: number;
 }
 
 export interface ActiveRoomEntry {

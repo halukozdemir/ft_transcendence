@@ -56,11 +56,6 @@ const Navbar = () => {
 
           {/* Right side */}
           <div className="flex items-center gap-3">
-            <div className="hidden items-center gap-2 rounded-full border border-white/5 bg-[rgba(40,40,57,0.65)] px-3 py-1.5 md:flex">
-              <span className="size-2 rounded-full bg-green-500" />
-              <span className="text-xs font-semibold text-slate-300">ÇEVRİMİÇİ</span>
-            </div>
-
             <button
               className="cursor-pointer rounded-lg p-2 text-slate-400 transition-colors hover:bg-(--dashboard-border)"
               type="button"
@@ -80,7 +75,7 @@ const Navbar = () => {
                   alt="User avatar"
                   className="size-full object-cover"
                   src={user.avatar}
-                  onError={(e) => { (e.target as HTMLImageElement).src = "/profile.png"; }}
+                  onError={(e) => { (e.target as HTMLImageElement).src = "/profile.jpg"; }}
                 />
               ) : (
                 userInitials

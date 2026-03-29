@@ -63,8 +63,8 @@ const ProfileDrawer = ({ open, onClose }: ProfileDrawerProps) => {
             <img
               alt="avatar"
               className="size-full object-cover"
-              src={user?.avatar || "/profile.png"}
-              onError={(e) => { (e.target as HTMLImageElement).src = "/profile.png"; }}
+              src={user?.avatar || "/profile.jpg"}
+              onError={(e) => { (e.target as HTMLImageElement).src = "/profile.jpg"; }}
             />
           </div>
           <div className="min-w-0">

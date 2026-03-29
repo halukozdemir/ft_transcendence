@@ -8,18 +8,43 @@ import RoomCard from "../../components/ui/RoomCard";
 import StatCard from "../../components/ui/StatCard";
 import { useAuth } from "../../context/authContext";
 import { gameApi } from "../../services/gameApi";
+import { profileApi } from "../../services/profileApi";
 import type { Friend, Room } from "../../types/lobby";
-import { rooms, friends as mockFriends, profile as mockProfile } from "./mockLobbyData";
+import { rooms as mockRooms } from "./mockLobbyData";
 import "./dashboard.css";
+
+interface PlayerStats {
+  xp: number;
+  level: number;
+  wins: number;
+  losses: number;
+  ranking: number;
+}
 
 const DashboardPage = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, accessToken } = useAuth();
   const [createRoomOpen, setCreateRoomOpen] = useState(false);
   const [searchText, setSearchText] = useState("");
-  const [activeRooms, setActiveRooms] = useState<Room[]>(rooms);
+  const [activeRooms, setActiveRooms] = useState<Room[]>([]);
   const [roomsLoading, setRoomsLoading] = useState(true);
+  const [playerStats, setPlayerStats] = useState<PlayerStats | null>(null);
 
+  // Fetch player stats
+  useEffect(() => {
+    if (!user || !accessToken) return;
+    profileApi.getStats(user.id, accessToken)
+      .then((data) => setPlayerStats({
+        xp: data.xp,
+        level: data.level,
+        wins: data.wins,
+        losses: data.losses,
+        ranking: data.ranking,
+      }))
+      .catch(() => {});
+  }, [user, accessToken]);
+
+  // Fetch active rooms
   useEffect(() => {
     let isCancelled = false;
 
@@ -40,35 +65,24 @@ const DashboardPage = () => {
     const fetchRooms = async () => {
       try {
         const response = await gameApi.getActiveRooms();
-        if (!isCancelled) {
-          setActiveRooms(normalizeRooms(response.rooms));
-        }
+        if (!isCancelled) setActiveRooms(normalizeRooms(response.rooms));
       } catch {
-        if (!isCancelled) {
-          setActiveRooms(rooms);
-        }
+        if (!isCancelled) setActiveRooms(mockRooms);
       } finally {
-        if (!isCancelled) {
-          setRoomsLoading(false);
-        }
+        if (!isCancelled) setRoomsLoading(false);
       }
     };
 
     fetchRooms();
     const poll = setInterval(fetchRooms, 3000);
-
-    return () => {
-      isCancelled = true;
-      clearInterval(poll);
-    };
+    return () => { isCancelled = true; clearInterval(poll); };
   }, []);
 
   const filteredRooms = useMemo(() => {
     const q = searchText.trim().toLowerCase();
     if (!q) return activeRooms;
     return activeRooms.filter((room: Room) =>
-      room.title.toLowerCase().includes(q) ||
-      room.host.toLowerCase().includes(q)
+      room.title.toLowerCase().includes(q) || room.host.toLowerCase().includes(q)
     );
   }, [activeRooms, searchText]);
 
@@ -90,44 +104,32 @@ const DashboardPage = () => {
   const goToRoom = (roomId: string, roomPassword?: string) => {
     const params = new URLSearchParams();
     params.set("roomId", roomId);
-
     const key = roomPasswordKey(roomId);
     if (roomPassword && roomPassword.trim().length > 0) {
       sessionStorage.setItem(key, roomPassword.trim());
     } else {
       sessionStorage.removeItem(key);
     }
-
     navigate(`/game?${params.toString()}`);
   };
 
   const handleJoinRoom = async (roomId: string) => {
     const room = activeRooms.find((r: Room) => r.id === roomId);
-    if (!room) {
-      goToRoom(roomId);
-      return;
-    }
+    if (!room) { goToRoom(roomId); return; }
 
     if (room.isLocked) {
       const enteredPassword = window.prompt("Bu oda şifreli. Lütfen şifreyi girin:");
       if (enteredPassword === null) return;
       if (!enteredPassword.trim()) return;
-
       try {
         const result = await gameApi.validateRoomPassword(roomId, enteredPassword.trim());
-        if (!result.valid) {
-          window.alert("Şifre hatalı.");
-          return;
-        }
+        if (!result.valid) { window.alert("Şifre hatalı."); return; }
       } catch {
-        window.alert("Şifre doğrulanamadı. Lütfen tekrar deneyin.");
-        return;
+        window.alert("Şifre doğrulanamadı. Lütfen tekrar deneyin."); return;
       }
-
       goToRoom(roomId, enteredPassword.trim());
       return;
     }
-
     goToRoom(roomId);
   };
 
@@ -138,41 +140,48 @@ const DashboardPage = () => {
       isLocked: data.isLocked,
       password: data.password,
     });
-
     setActiveRooms((prev: Room[]) => [normalizeRoom(created.room), ...prev.filter((r: Room) => r.id !== created.room.id)]);
     goToRoom(created.room.id, data.isLocked ? data.password : undefined);
   };
-
-  const displayFriends: Friend[] = (user?.friends || []).length > 0
-    ? (user?.friends || []).map((f: any) => ({
-        id: String(f.id),
-        nickname: f.username,
-        status: f.online_status ? "available" as const : "offline" as const,
-        detail: f.online_status ? "Çevrimiçi" : "Çevrimdışı",
-        avatarUrl: f.avatar || undefined,
-        initials: f.username.slice(0, 2).toUpperCase(),
-      }))
-    : mockFriends;
-
-  const xpPct = Math.round((mockProfile.xpCurrent / mockProfile.xpGoal) * 100);
-  const wlRatio = mockProfile.losses > 0
-    ? (mockProfile.wins / mockProfile.losses).toFixed(2)
-    : mockProfile.wins.toString();
 
   const goToGame = (source?: string) => {
     const query = source ? `?source=${encodeURIComponent(source)}` : "";
     navigate(`/game${query}`);
   };
 
+  const displayFriends: Friend[] = (user?.friends || []).map((f: any) => ({
+    id: String(f.id),
+    nickname: f.username,
+    status: f.online_status ? "available" as const : "offline" as const,
+    detail: f.online_status ? "Çevrimiçi" : "Çevrimdışı",
+    avatarUrl: f.avatar || undefined,
+    initials: f.username.slice(0, 2).toUpperCase(),
+  }));
+
+  // XP progress within current level (each level = 100 XP)
+  const level = playerStats?.level ?? 1;
+  const xp = playerStats?.xp ?? 0;
+  const xpInLevel = xp % 100;
+  const xpPct = xpInLevel;
+  const wlRatio = playerStats
+    ? playerStats.losses > 0
+      ? (playerStats.wins / playerStats.losses).toFixed(2)
+      : String(playerStats.wins)
+    : "—";
+
   const friendList = (
     <>
-      {displayFriends.map((friend: Friend) => (
-        <FriendRow
-          friend={friend}
-          key={friend.id}
-          onAction={(_, status) => { if (status === "ingame") goToGame("friend-join"); }}
-        />
-      ))}
+      {displayFriends.length === 0 ? (
+        <p className="text-xs text-slate-500">Henüz arkadaş eklenmedi.</p>
+      ) : (
+        displayFriends.map((friend: Friend) => (
+          <FriendRow
+            friend={friend}
+            key={friend.id}
+            onAction={(_, status) => { if (status === "ingame") goToGame("friend-join"); }}
+          />
+        ))
+      )}
     </>
   );
 
@@ -200,34 +209,35 @@ const DashboardPage = () => {
                 <img
                   alt="Player avatar"
                   className="size-full rounded-full object-cover"
-                  src={user?.avatar || "/profile.png"}
-                  onError={(e) => { (e.target as HTMLImageElement).src = "/profile.png"; }}
+                  src={user?.avatar || "/profile.jpg"}
+                  onError={(e) => { (e.target as HTMLImageElement).src = "/profile.jpg"; }}
                 />
               </div>
               <span className="absolute right-0 bottom-0 rounded-full border-2 border-(--dashboard-card) bg-(--dashboard-primary) px-2 py-0.5 text-[10px] font-black">
-                LVL {mockProfile.level}
+                LVL {level}
               </span>
             </div>
-            <h3 className="mb-1 text-base font-bold text-white xl:text-lg">{user?.username || mockProfile.nickname}</h3>
-            <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">{mockProfile.rankText}</p>
+            <h3 className="mb-1 text-base font-bold text-white xl:text-lg">{user?.username ?? "—"}</h3>
+            <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+              {playerStats ? `Küresel Sıralama: #${playerStats.ranking.toLocaleString()}` : "—"}
+            </p>
             <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-(--dashboard-border)">
               <div className="h-full bg-(--dashboard-primary)" style={{ width: `${xpPct}%` }} />
             </div>
             <p className="mt-2 text-[10px] text-slate-500">
-              XP: {mockProfile.xpCurrent.toLocaleString()} / {mockProfile.xpGoal.toLocaleString()}
+              XP: {xpInLevel} / 100
             </p>
           </button>
 
           <div className="grid grid-cols-2 gap-3">
-            <StatCard label="Galibiyet"   value={String(mockProfile.wins)}   />
-            <StatCard label="Mağlubiyet" value={String(mockProfile.losses)} />
+            <StatCard label="Galibiyet"   value={playerStats ? String(playerStats.wins) : "—"} />
+            <StatCard label="Mağlubiyet" value={playerStats ? String(playerStats.losses) : "—"} />
             <div className="col-span-2">
               <StatCard accent label="G/M Oranı" value={wlRatio} />
             </div>
           </div>
 
-          <div className="mt-auto flex flex-col gap-1">
-          </div>
+          <div className="mt-auto flex flex-col gap-1" />
         </aside>
 
         {/* Divider */}
@@ -239,7 +249,6 @@ const DashboardPage = () => {
             <div className="mb-4">
               <h1 className="text-xl font-bold text-white md:text-2xl">Aktif Odalar</h1>
             </div>
-
             <label className="group relative block">
               <span className="absolute top-1/2 left-4 -translate-y-1/2 text-slate-500 transition-colors group-focus-within:text-(--dashboard-primary)">
                 <AppIcon name="search" size={18} />
@@ -258,11 +267,9 @@ const DashboardPage = () => {
             {roomsLoading && activeRooms.length === 0 && (
               <p className="text-sm text-slate-500">Odalar yükleniyor...</p>
             )}
-
             {filteredRooms.map((room) => (
               <RoomCard key={room.id} room={room} onJoin={handleJoinRoom} />
             ))}
-
             {!roomsLoading && filteredRooms.length === 0 && (
               <p className="text-sm text-slate-500">Aktif oda bulunamadı.</p>
             )}

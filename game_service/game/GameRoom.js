@@ -26,7 +26,7 @@ class GameRoom {
         }
 
         this.match = {
-            status: "waiting", // waiting | in_progress | finished
+            status: "lobby", // lobby | in_progress | finished
             startedAt: null,
             endedAt: null,
             endReason: null,
@@ -35,11 +35,8 @@ class GameRoom {
             forfeitTeam: null,
             disconnectedTeam: null,
         }
-        this.rematchRequests = new Set()
-        this.rematchTimeout = null
-        this.rematchTimeoutDuration = 30000 // 30 seconds in milliseconds
-        this.rematchTimeoutStartedAt = null
-        this.onRematchTimeout = typeof options.onRematchTimeout === "function" ? options.onRematchTimeout : null
+        this.readyPlayers = new Set() // clientId set
+        this.onMatchFinished = typeof options.onMatchFinished === "function" ? options.onMatchFinished : null
 
         const requestedTitle = typeof options.title === "string" ? options.title.trim() : ""
         this.title = requestedTitle.length > 0 ? requestedTitle : "Quick Match"
@@ -98,7 +95,7 @@ class GameRoom {
     }
 
     getReadyPlayerCount() {
-        return 2
+        return this.readyPlayers.size
     }
 
     getHostClientId() {
@@ -141,10 +138,8 @@ class GameRoom {
         const clientId = this.normalizeClientId(rawClientId)
         if (!clientId) return false
 
-        if (this.match.status === "finished" && !this.clientTeam[clientId]) {
-            // Finished matches keep the same player cohort for rematch.
-            return false
-        }
+        // During a match, don't allow new players
+        if (this.match.status === "in_progress") return false
 
         const reservedTeam = this.clientTeam[clientId]
         let team = null
@@ -156,7 +151,6 @@ class GameRoom {
             const reservedTeamCount = this.getTeamPlayerCount(reservedTeam)
             const otherTeamCount = this.getTeamPlayerCount(otherTeam)
 
-            // Keep previous team only if it does not worsen balance.
             if (reservedTeamCount <= otherTeamCount || !this.hasTeamCapacity(otherTeam)) {
                 team = reservedTeam
             }
@@ -177,21 +171,10 @@ class GameRoom {
             }
         }
 
-        if (!team) {
-            return false
-        }
-
-        if (!reservedTeam) {
-            this.lastAutoAssignedTeam = team
-        }
-
-        if (!this.hasTeamCapacity(team)) {
-            return false
-        }
-
-        if (team !== "red" && team !== "blue") {
-            return false
-        }
+        if (!team) return false
+        if (!reservedTeam) this.lastAutoAssignedTeam = team
+        if (!this.hasTeamCapacity(team)) return false
+        if (team !== "red" && team !== "blue") return false
 
         const { x, y } = this.getSpawnPosition(team)
 
@@ -208,7 +191,6 @@ class GameRoom {
             this.hostClientId = clientId
         }
         this.playerCount++
-        this.startMatchIfReady()
         return true
     }
 
@@ -220,7 +202,8 @@ class GameRoom {
             delete this.socketToClient[id]
             if (clientId) {
                 delete this.clientToSocket[clientId]
-                this.rematchRequests.delete(clientId)
+                this.readyPlayers.delete(clientId)
+                delete this.clientTeam[clientId]
             }
             if (clientId && this.hostClientId === clientId) {
                 this.refreshHostClientId()
@@ -231,93 +214,102 @@ class GameRoom {
             if (this.match.status === "in_progress" && !options.suppressMatchEnd) {
                 const disconnectedTeamCount = this.getTeamPlayerCount(removedPlayer.team)
                 if (disconnectedTeamCount < 1) {
-                    this.setWaitingForOpponent(removedPlayer.team)
+                    this.finishMatch({
+                        reason: "disconnect",
+                        winnerTeam: removedPlayer.team === "red" ? "blue" : "red",
+                        disconnectedTeam: removedPlayer.team,
+                    })
                 }
             }
         }
 
-        if (this.playerCount < this.getReadyPlayerCount() && this.match.status === "waiting") {
-            this.match.startedAt = null
-        }
-
-        if (this.playerCount === 0 && this.match.status === "finished") {
-            this.match.status = "waiting"
-            this.match.startedAt = null
-            this.match.endedAt = null
-            this.match.endReason = null
-            this.match.winnerTeam = null
-            this.match.loserTeam = null
-            this.match.forfeitTeam = null
-            this.match.disconnectedTeam = null
-            this.score = { red: 0, blue: 0 }
-            this.ball.reset()
-        }
-
         if (this.playerCount === 0) {
+            this.resetToLobby()
             this.clientTeam = {}
             this.hostClientId = null
-            this.rematchRequests.clear()
         }
     }
 
-    clearRematchTimeout() {
-        if (this.rematchTimeout) {
-            clearTimeout(this.rematchTimeout)
-            this.rematchTimeout = null
-            this.rematchTimeoutStartedAt = null
-        }
+    switchTeam(id) {
+        if (this.match.status !== "lobby") return { ok: false, reason: "not_in_lobby" }
+
+        const player = this.players[id]
+        if (!player) return { ok: false, reason: "player_not_found" }
+
+        const clientId = this.socketToClient[id]
+        if (!clientId) return { ok: false, reason: "client_not_found" }
+
+        const newTeam = player.team === "red" ? "blue" : "red"
+        if (!this.hasTeamCapacity(newTeam)) return { ok: false, reason: "team_full" }
+
+        player.team = newTeam
+        this.clientTeam[clientId] = newTeam
+
+        // Reposition player in new team
+        const { x, y } = this.getSpawnPosition(newTeam)
+        player.x = x
+        player.y = y
+
+        // Switching team resets ready state for everyone
+        this.readyPlayers.clear()
+
+        return { ok: true, team: newTeam }
     }
 
-    getRematchAcceptedCount() {
-        return Object.keys(this.players).reduce((count, socketId) => {
+    toggleReady(id) {
+        if (this.match.status !== "lobby") return { ok: false, reason: "not_in_lobby" }
+
+        const player = this.players[id]
+        if (!player) return { ok: false, reason: "player_not_found" }
+
+        const clientId = this.socketToClient[id]
+        if (!clientId) return { ok: false, reason: "client_not_found" }
+
+        if (this.readyPlayers.has(clientId)) {
+            this.readyPlayers.delete(clientId)
+        } else {
+            this.readyPlayers.add(clientId)
+        }
+
+        // Check if we can start the match
+        this.startMatchIfReady()
+
+        return { ok: true, ready: this.readyPlayers.has(clientId) }
+    }
+
+    isPlayerReady(socketId) {
+        const clientId = this.socketToClient[socketId]
+        return clientId ? this.readyPlayers.has(clientId) : false
+    }
+
+    getLobbySnapshot() {
+        const players = Object.entries(this.players).map(([socketId, player]) => {
             const clientId = this.socketToClient[socketId]
-            if (!clientId) return count
-            return count + (this.rematchRequests.has(clientId) ? 1 : 0)
-        }, 0)
-    }
-
-    getRematchRequestedPlayerIds() {
-        return Object.keys(this.players).filter((socketId) => {
-            const clientId = this.socketToClient[socketId]
-            return Boolean(clientId && this.rematchRequests.has(clientId))
+            return {
+                id: socketId,
+                clientId,
+                team: player.team,
+                ready: clientId ? this.readyPlayers.has(clientId) : false,
+            }
         })
-    }
 
-    handleRematchTimeout() {
-        this.rematchTimeout = null
-        this.rematchTimeoutStartedAt = null
-        
-        // Remove all players when timeout expires - oylama iptal
-        const allPlayerSocketIds = Object.keys(this.players)
-        allPlayerSocketIds.forEach((socketId) => {
-            this.removePlayer(socketId)
-        })
-        
-        // Call callback if provided
-        if (this.onRematchTimeout) {
-            this.onRematchTimeout()
-        }
-    }
+        const redCount = this.getTeamPlayerCount("red")
+        const blueCount = this.getTeamPlayerCount("blue")
+        const teamsEqual = redCount > 0 && redCount === blueCount
+        const allReady = this.playerCount > 0 && this.readyPlayers.size === this.playerCount
 
-    getRematchSnapshot() {
-        let timeoutRemainingSeconds = null
-        if (this.rematchTimeout && this.rematchTimeoutStartedAt) {
-            const elapsed = Date.now() - this.rematchTimeoutStartedAt
-            const remaining = Math.max(0, this.rematchTimeoutDuration - elapsed)
-            timeoutRemainingSeconds = Math.ceil(remaining / 1000)
-        }
-        
         return {
-            acceptedCount: this.getRematchAcceptedCount(),
-            requiredCount: this.playerCount,
-            requestedPlayerIds: this.getRematchRequestedPlayerIds(),
-            timeoutRemainingSeconds,
+            players,
+            teamsEqual,
+            allReady,
+            canStart: teamsEqual && allReady,
+            readyCount: this.readyPlayers.size,
+            totalCount: this.playerCount,
         }
     }
 
-    resetForRematch() {
-        this.clearRematchTimeout()
-        this.match.status = "waiting"
+    resetToLobby() {
+        this.match.status = "lobby"
         this.match.startedAt = null
         this.match.endedAt = null
         this.match.endReason = null
@@ -327,51 +319,8 @@ class GameRoom {
         this.match.disconnectedTeam = null
         this.score = { red: 0, blue: 0 }
         this.ball.reset()
-        this.rematchRequests.clear()
+        this.readyPlayers.clear()
         this.resetAfterGoal()
-        this.startMatchIfReady()
-    }
-
-    requestRematch(id) {
-        if (this.match.status !== "finished") {
-            return { ok: false, reason: "match_not_finished" }
-        }
-
-        const player = this.players[id]
-        if (!player) {
-            return { ok: false, reason: "player_not_found" }
-        }
-
-        const clientId = this.socketToClient[id]
-        if (!clientId) {
-            return { ok: false, reason: "client_not_found" }
-        }
-
-        this.rematchRequests.add(clientId)
-
-        const acceptedCount = this.getRematchAcceptedCount()
-        const requiredCount = this.playerCount
-
-        if (requiredCount > 0 && acceptedCount >= requiredCount) {
-            this.clearRematchTimeout()
-            this.resetForRematch()
-            return { ok: true, started: true }
-        }
-
-        // Start timeout on first rematch request
-        if (!this.rematchTimeout) {
-            this.rematchTimeoutStartedAt = Date.now()
-            this.rematchTimeout = setTimeout(() => {
-                this.handleRematchTimeout()
-            }, this.rematchTimeoutDuration)
-        }
-
-        return {
-            ok: true,
-            started: false,
-            acceptedCount,
-            requiredCount,
-        }
     }
 
     handleInput(id, input) {
@@ -395,19 +344,6 @@ class GameRoom {
         this.pendingKicks.clear()
     }
 
-    setWaitingForOpponent(disconnectedTeam = null) {
-        this.match.status = "waiting"
-        this.match.startedAt = null
-        this.match.endedAt = null
-        this.match.endReason = "opponent_missing"
-        this.match.winnerTeam = null
-        this.match.loserTeam = null
-        this.match.forfeitTeam = null
-        this.match.disconnectedTeam = disconnectedTeam
-        this.resetPlayersControlState()
-        this.ball.reset()
-    }
-
     forfeit(id) {
         const player = this.players[id]
         if (!player || this.match.status !== "in_progress") return
@@ -421,10 +357,6 @@ class GameRoom {
 
     update() {
         this.lastSimulationAt = Date.now()
-
-        // Safety net: if enough players are present but match did not transition yet,
-        // force the room into in_progress.
-        this.startMatchIfReady()
 
         if (this.match.status !== "in_progress") {
             return
@@ -535,11 +467,14 @@ class GameRoom {
     }
 
     startMatchIfReady() {
-        if (this.match.status !== "waiting") return
+        if (this.match.status !== "lobby") return
 
         const redCount = this.getTeamPlayerCount("red")
         const blueCount = this.getTeamPlayerCount("blue")
-        if (redCount >= 1 && blueCount >= 1) {
+        const teamsEqual = redCount > 0 && redCount === blueCount
+        const allReady = this.playerCount > 0 && this.readyPlayers.size === this.playerCount
+
+        if (teamsEqual && allReady) {
             this.match.status = "in_progress"
             this.match.startedAt = Date.now()
             this.match.endedAt = null
@@ -548,7 +483,7 @@ class GameRoom {
             this.match.loserTeam = null
             this.match.forfeitTeam = null
             this.match.disconnectedTeam = null
-            this.rematchRequests.clear()
+            this.readyPlayers.clear()
             this.resetPlayersControlState()
             this.score = { red: 0, blue: 0 }
             this.ball.reset()
@@ -588,14 +523,28 @@ class GameRoom {
         this.match.forfeitTeam = forfeitTeam
         this.match.disconnectedTeam = disconnectedTeam
         this.resetPlayersControlState()
-        
-        // Start rematch timeout immediately when match finishes
-        if (!this.rematchTimeout && this.playerCount > 0) {
-            this.rematchTimeoutStartedAt = Date.now()
-            this.rematchTimeout = setTimeout(() => {
-                this.handleRematchTimeout()
-            }, this.rematchTimeoutDuration)
+
+        if (this.onMatchFinished) {
+            const redPlayerIds = this.getTeamPlayers("red").map((p) => this.socketToClient[p.id]).filter(Boolean)
+            const bluePlayerIds = this.getTeamPlayers("blue").map((p) => this.socketToClient[p.id]).filter(Boolean)
+            this.onMatchFinished({
+                winnerTeam,
+                scoreRed: this.score.red,
+                scoreBlue: this.score.blue,
+                durationSeconds: this.match.startedAt ? Math.floor((this.match.endedAt - this.match.startedAt) / 1000) : 0,
+                redPlayerIds,
+                bluePlayerIds,
+                endReason: reason,
+            })
         }
+
+        // Return to lobby after a short delay so clients can see the result
+        this._returnToLobbyTimeout = setTimeout(() => {
+            this._returnToLobbyTimeout = null
+            if (this.match.status === "finished" && this.playerCount > 0) {
+                this.resetToLobby()
+            }
+        }, 5000) // 5 seconds to show result, then back to lobby
     }
 
     getTimeRemainingSeconds() {
@@ -700,6 +649,7 @@ class GameRoom {
                 team: p.team,
                 x: p.x,
                 y: p.y,
+                ready: this.isPlayerReady(p.id),
             })),
             ball: {
                 x: this.ball.x,
@@ -714,8 +664,8 @@ class GameRoom {
                 forfeitTeam: this.match.forfeitTeam,
                 disconnectedTeam: this.match.disconnectedTeam,
                 timeRemainingSeconds: this.getTimeRemainingSeconds(),
-                rematch: this.getRematchSnapshot(),
             },
+            lobby: this.getLobbySnapshot(),
             room: this.getRoomInfo(),
             meta: {
                 serverTimeMs: Date.now(),
@@ -743,8 +693,8 @@ class GameRoom {
                 forfeitTeam: this.match.forfeitTeam,
                 disconnectedTeam: this.match.disconnectedTeam,
                 timeRemainingSeconds: this.getTimeRemainingSeconds(),
-                rematch: this.getRematchSnapshot(),
             },
+            lobby: this.getLobbySnapshot(),
             render: this.getRenderSnapshot(),
             overlay: {
                 score: this.score,
