@@ -36,8 +36,7 @@ const PrivacyPage = () => {
               <li>
                 <span className="text-white font-medium">Account Information:</span> When
                 you register, we collect your email address, username, and a hashed version
-                of your password. If you sign in through 42 OAuth, we receive your 42 intra
-                profile ID and email.
+                of your password.
               </li>
               <li>
                 <span className="text-white font-medium">Profile Data:</span> Avatar images

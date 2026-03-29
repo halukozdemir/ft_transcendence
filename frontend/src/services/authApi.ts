@@ -190,7 +190,4 @@ export const authApi = {
       body: JSON.stringify({ status }),
     });
   },
-
-  // OAuth 42 Redirect
-  getOAuth42Url: (): string => `${API_BASE_URL}/oauth/42/`,
 };

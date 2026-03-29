@@ -34,7 +34,7 @@ graph TB
     HTTPS -->|"/api/ai/*"| AI
 
     subgraph AuthService["auth_service - Django + DRF :8000"]
-        AUTH["views.py — 19 endpoint<br/>register, login, profile, friends<br/>leaderboard, match-result, OAuth"]
+        AUTH["views.py — 17 endpoint<br/>register, login, profile, friends<br/>leaderboard, match-result"]
         AUTH_MODELS["models.py<br/>User, PlayerStats<br/>MatchRecord, Achievement<br/>FriendRequest"]
         AUTH_SER["serializers.py<br/>JSON serialization"]
         AUTH --> AUTH_MODELS
@@ -79,7 +79,7 @@ graph TB
 |---|--------|-----------|------|-----|
 | 1 | **Gateway** | Nginx 1.25 | 80, 443 | Reverse proxy, SSL, routing |
 | 2 | **Frontend** | React 18 | 80 (internal) | SPA, oyun arayuzu |
-| 3 | **Auth Service** | Django 5 + DRF + Gunicorn | 8000 | Kayit, giris, JWT, OAuth 42, profil |
+| 3 | **Auth Service** | Django 5 + DRF + Gunicorn | 8000 | Kayit, giris, JWT, profil |
 | 4 | **Game Service** | Node.js + Express + Socket.io | 8001 | Haxball oyun motoru, WebSocket |
 | 5 | **Chat Service** | Django 5 + Channels + Daphne | 8003 | Sohbet, DM, WebSocket |
 | 6 | **AI Service** | FastAPI + Uvicorn | 8002 | Avatar kontrolu, mesaj moderasyonu |
@@ -144,11 +144,6 @@ Tarayicidan `https://localhost` adresini ac.
 | `JWT_SECRET_KEY` | Token imzalama anahtari | `dev-jwt-secret-key` |
 | `JWT_ACCESS_TOKEN_LIFETIME_MINUTES` | Access token suresi (dk) | `60` |
 | `JWT_REFRESH_TOKEN_LIFETIME_DAYS` | Refresh token suresi (gun) | `7` |
-| **OAuth 42** | | |
-| `OAUTH_42_CLIENT_ID` | 42 API client ID | - |
-| `OAUTH_42_CLIENT_SECRET` | 42 API client secret | - |
-| `OAUTH_42_REDIRECT_URI` | OAuth callback URL | `https://localhost/api/auth/oauth/callback` |
-
 > **Not:** Tek PostgreSQL container'i kullaniliyor. `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` degiskenleri hem container'in kendisi hem de auth/chat/game servisleri tarafindan ortaklanir. Tum tablolar Django migrations ile yonetilir.
 
 ### Komutlar
@@ -363,7 +358,7 @@ ft_transcendence/
 │   ├── auth_project/     # Django settings
 │   ├── auth_app/         # App logic
 │   │   ├── models.py     # User modeli
-│   │   ├── views.py      # Register, Login, OAuth, Friends
+│   │   ├── views.py      # Register, Login, Friends
 │   │   ├── serializers.py
 │   │   └── tests/        # Test suite
 │   └── requirements.txt
@@ -403,9 +398,8 @@ ft_transcendence/
 - [x] database/init.sql ile tablo semalari
 
 ### Adim 2: Kullanici Yonetimi
-- [x] User modeli (email, avatar, online_status, intra_id, friends)
+- [x] User modeli (email, avatar, online_status, friends)
 - [x] JWT authentication (login, register, refresh, logout)
-- [x] 42 OAuth entegrasyonu
 - [x] Profil ve avatar yonetimi
 - [x] Sifre degistirme
 - [x] Arkadas ekleme/cikarma

@@ -12,7 +12,6 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, username: string, password: string, password2: string) => Promise<void>;
   logout: () => Promise<void>;
-  setTokensFromOAuth: (access: string, refresh: string) => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
 
@@ -139,19 +138,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const setTokensFromOAuth = async (access: string, refresh: string) => {
-    setAccessToken(access);
-    setRefreshToken(refresh);
-    localStorage.setItem("accessToken", access);
-    localStorage.setItem("refreshToken", refresh);
-    try {
-      const profile = await authApi.getProfile(access);
-      setUser(profile);
-    } catch (err) {
-      console.error("Failed to fetch profile after OAuth", err);
-    }
-  };
-
   return (
     <AuthContext.Provider
       value={{
@@ -164,7 +150,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         login,
         register,
         logout,
-        setTokensFromOAuth,
         refreshProfile,
       }}
     >
