@@ -21,8 +21,6 @@ from .views import(
     RemoveFriendView,
     FriendListView,
     PresenceView,
-    OAuth42RedirectView,
-    OAuth42CallbackView,
     MatchResultView,
 )
 
@@ -50,7 +48,5 @@ urlpatterns = [
     path('friends/<int:user_id>/', RemoveFriendView.as_view(), name='remove-friend'),
     path('presence/', PresenceView.as_view(), name='presence'),
     path('leaderboard/', LeaderboardView.as_view(), name='leaderboard'),
-    path('oauth/42/', OAuth42RedirectView.as_view(), name='oauth-42'),
-    path('oauth/callback/', OAuth42CallbackView.as_view(), name='oauth-callback'),
     path('match-result/', MatchResultView.as_view(), name='match-results'),
 ]

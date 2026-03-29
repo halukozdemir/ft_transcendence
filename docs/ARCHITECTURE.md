@@ -32,7 +32,7 @@ dis dunyaya acilir.
   |  - Login UI   |   |               |   |   :8001       |
   |  - Game UI    |   |  - Register   |   |               |
   |  - Chat UI    |   |  - Login/JWT  |   |  - Game Loop  |
-  |  - Profile    |   |  - OAuth 42   |   |  - Physics    |
+  |  - Profile    |   |  - Friends     |   |  - Physics    |
   |               |   |  - Profile    |   |  - Rooms      |
   +---------------+   +-------+-------+   +-------+-------+
                               |                    |
@@ -243,7 +243,6 @@ Tum env degiskenleri `.env` dosyasinda tanimlidir. Ornek: `env.example`
 | POSTGRES_CHAT_* | chat, db_chat | Chat DB baglanti bilgileri |
 | REDIS_* | chat, redis, game | Redis baglanti bilgileri |
 | JWT_* | auth | JWT token ayarlari |
-| OAUTH_42_* | auth | 42 API OAuth bilgileri |
 | AI_SERVICE_* | auth, chat | AI servis adresi |
 
 ---

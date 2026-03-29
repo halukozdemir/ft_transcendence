@@ -24,7 +24,6 @@
 - [ ] Register endpoint (POST /api/auth/register/)
 - [ ] Login endpoint (POST /api/auth/login/) - JWT token
 - [ ] Token refresh (POST /api/auth/token/refresh/)
-- [ ] 42 OAuth entegrasyonu
 - [ ] Profil goruntuleme/guncelleme (GET/PUT /api/auth/profile/)
 - [ ] Avatar yukleme (POST /api/auth/profile/avatar/)
 - [ ] Frontend: Login & Register sayfalari

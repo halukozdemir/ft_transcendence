@@ -124,7 +124,6 @@ SPECTACULAR_SETTINGS = {
         {'name': 'Stats', 'description': 'Player statistics, match history, achievements'},
         {'name': 'Leaderboard', 'description': 'Global ranking'},
         {'name': 'Presence', 'description': 'Online/offline heartbeat'},
-        {'name': 'OAuth', 'description': '42 OAuth integration'},
         {'name': 'Match', 'description': 'Internal match result recording'},
     ],
 }
@@ -152,11 +151,6 @@ CORS_ALLOWED_ORIGINS = [
 # ---------- Reverse proxy (gateway) ----------
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
-
-# ---------- OAuth 42 ----------
-OAUTH_42_CLIENT_ID = os.environ.get('OAUTH_42_CLIENT_ID', '')
-OAUTH_42_CLIENT_SECRET = os.environ.get('OAUTH_42_CLIENT_SECRET', '')
-OAUTH_42_REDIRECT_URI = os.environ.get('OAUTH_42_REDIRECT_URI', '')
 
 # ---------- i18n ----------
 LANGUAGE_CODE = 'en-us'
