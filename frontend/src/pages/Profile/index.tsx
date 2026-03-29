@@ -76,78 +76,84 @@ const ProfilePage = () => {
     }
   };
 
+  const fetchAll = async (showLoading = true) => {
+    if (!targetUserId || !accessToken) return;
+    if (showLoading) setLoading(true);
+    try {
+      if (!isOwnProfile) {
+        const publicUser = await profileApi.getUserPublic(targetUserId);
+        setTargetUser(publicUser);
+      } else {
+        setTargetUser(null);
+      }
+
+      const [statsData, matchData, achData] = await Promise.all([
+        profileApi.getStats(targetUserId, accessToken),
+        profileApi.getMatchHistory(targetUserId, accessToken, PAGE_SIZE, 0),
+        profileApi.getAchievements(targetUserId, accessToken),
+      ]);
+
+      setLevel(statsData.level);
+      setRank(statsData.ranking ?? 0);
+
+      setStats({
+        totalMatches: statsData.total_matches,
+        winPercentage: Math.round(statsData.win_rate),
+        xp: statsData.xp,
+        level: statsData.level,
+        xpInLevel: statsData.xp % 100,
+        xpGoal: 100,
+        goalsScored: 0,
+        goalsPerGame: 0,
+        offenseRating: 0,
+        defenseRating: 0,
+        weeklyMatches: 0,
+      });
+
+      setTotalMatches(matchData.total);
+      setMatches(
+        matchData.results.map((m: any) => {
+          const opponentNames = m.opponents?.map((o: any) => o.username).join(", ") || `Maç #${m.id}`;
+          const result = (m.result as string).toUpperCase() as "WIN" | "LOSS" | "DRAW";
+          return {
+            id: String(m.id),
+            roomName: opponentNames,
+            result,
+            score: { us: m.my_score, them: m.opponent_score },
+            timestamp: new Date(m.played_at),
+            timeAgoText: timeAgo(m.played_at),
+          };
+        })
+      );
+
+      setAchievements(
+        achData.map((a: any) => ({
+          id: String(a.id),
+          type: BADGE_TYPE_MAP[a.badge_type] ?? "special",
+          icon: a.icon_url,
+          title: a.name,
+          description: a.description,
+          unlockedAt: new Date(a.unlocked_at),
+        }))
+      );
+    } catch (err) {
+      console.error("Profile data fetch failed", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial fetch
+  useEffect(() => {
+    setMatchPage(1);
+    fetchAll();
+  }, [targetUserId, accessToken]);
+
+  // Poll every 5s for presence/data updates
   useEffect(() => {
     if (!targetUserId || !accessToken) return;
-    setLoading(true);
-    setMatchPage(1);
-
-    const fetchAll = async () => {
-      try {
-        // Fetch target user's public profile if not own profile
-        if (!isOwnProfile) {
-          const publicUser = await profileApi.getUserPublic(targetUserId);
-          setTargetUser(publicUser);
-        } else {
-          setTargetUser(null);
-        }
-
-        const [statsData, matchData, achData] = await Promise.all([
-          profileApi.getStats(targetUserId, accessToken),
-          profileApi.getMatchHistory(targetUserId, accessToken, PAGE_SIZE, 0),
-          profileApi.getAchievements(targetUserId, accessToken),
-        ]);
-
-        setLevel(statsData.level);
-        setRank(statsData.ranking ?? 0);
-
-        setStats({
-          totalMatches: statsData.total_matches,
-          winPercentage: Math.round(statsData.win_rate),
-          xp: statsData.xp,
-          level: statsData.level,
-          xpInLevel: statsData.xp % 100,
-          xpGoal: 100,
-          goalsScored: 0,
-          goalsPerGame: 0,
-          offenseRating: 0,
-          defenseRating: 0,
-          weeklyMatches: 0,
-        });
-
-        setTotalMatches(matchData.total);
-        setMatches(
-          matchData.results.map((m: any) => {
-            const opponentNames = m.opponents?.map((o: any) => o.username).join(", ") || `Maç #${m.id}`;
-            const result = (m.result as string).toUpperCase() as "WIN" | "LOSS" | "DRAW";
-            return {
-              id: String(m.id),
-              roomName: opponentNames,
-              result,
-              score: { us: m.my_score, them: m.opponent_score },
-              timestamp: new Date(m.played_at),
-              timeAgoText: timeAgo(m.played_at),
-            };
-          })
-        );
-
-        setAchievements(
-          achData.map((a: any) => ({
-            id: String(a.id),
-            type: BADGE_TYPE_MAP[a.badge_type] ?? "special",
-            icon: a.icon_url,
-            title: a.name,
-            description: a.description,
-            unlockedAt: new Date(a.unlocked_at),
-          }))
-        );
-      } catch (err) {
-        console.error("Profile data fetch failed", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAll();
+    const interval = setInterval(() => fetchAll(false), 5000);
+    return () => clearInterval(interval);
   }, [targetUserId, accessToken]);
 
   const handlePageChange = (page: number) => {

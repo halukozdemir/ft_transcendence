@@ -63,16 +63,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [accessToken, user, refreshToken]);
 
-  // Presence heartbeat — ping every 30s, stops when tab closes
+  // Presence heartbeat — ping every 3s, stops when tab closes
   useEffect(() => {
     if (!accessToken || !user) return;
 
     authApi.setPresence(accessToken, "online");
-    const interval = setInterval(() => {
+    const heartbeat = setInterval(() => {
       authApi.setPresence(accessToken, "online");
     }, 3000);
 
-    return () => clearInterval(interval);
+    // Refresh profile every 10s for friend list / status updates
+    const profilePoll = setInterval(() => {
+      refreshProfile();
+    }, 10000);
+
+    return () => {
+      clearInterval(heartbeat);
+      clearInterval(profilePoll);
+    };
   }, [accessToken, user]);
 
   const login = async (email: string, password: string) => {
