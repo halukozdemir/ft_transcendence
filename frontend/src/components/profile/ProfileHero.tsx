@@ -12,7 +12,6 @@ interface ProfileHeroData {
 
 interface ProfileHeroProps {
   profile: ProfileHeroData;
-  onAddFriend?: () => void;
   isOwnProfile?: boolean;
 }
 
@@ -30,7 +29,7 @@ function lastSeenText(lastSeen: string | null, isOnline: boolean): string {
   return `${Math.floor(diff / 86400)} gün önce`;
 }
 
-const ProfileHero = ({ profile, onAddFriend, isOwnProfile }: ProfileHeroProps) => {
+const ProfileHero = ({ profile, isOwnProfile }: ProfileHeroProps) => {
   return (
     <section className="relative mb-8">
       <div className="h-64 sm:h-80 w-full rounded-2xl overflow-hidden relative group">
@@ -76,16 +75,7 @@ const ProfileHero = ({ profile, onAddFriend, isOwnProfile }: ProfileHeroProps) =
             </div>
           </div>
           <div className="flex gap-3 w-full sm:w-auto">
-            {!isOwnProfile && (
-              <button
-                className="cursor-pointer flex-1 sm:flex-none px-6 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/10 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2"
-                onClick={onAddFriend}
-                type="button"
-              >
-                <span className="material-symbols-outlined text-lg">person_add</span>
-                Arkadaş Ekle
-              </button>
-            )}
+            {/* Action buttons could go here */}
           </div>
         </div>
       </div>

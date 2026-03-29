@@ -161,15 +161,6 @@ const ProfilePage = () => {
     fetchMatches(page);
   };
 
-  const handleAddFriend = async () => {
-    if (!targetUserId || !accessToken) return;
-    try {
-      await profileApi.sendFriendRequest(targetUserId, accessToken);
-    } catch (err) {
-      console.error("Add friend failed", err);
-    }
-  };
-
   if (!user) {
     return (
       <div className="flex min-h-full items-center justify-center">
@@ -210,7 +201,6 @@ const ProfilePage = () => {
     <div className="px-4 py-8 md:px-6">
       <ProfileHero
         isOwnProfile={isOwnProfile}
-        onAddFriend={handleAddFriend}
         profile={profileData}
       />
 
