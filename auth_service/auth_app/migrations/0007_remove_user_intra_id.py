@@ -4,7 +4,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('auth_app', '0006_remove_elo_tier_add_xp'),
+        ('auth_app', '0001_initial'),
     ]
 
     operations = [
