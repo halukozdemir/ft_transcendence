@@ -36,6 +36,7 @@ PRESENCE_TIMEOUT = 5  # seconds
 
 class UserSerializer(serializers.ModelSerializer):
     avatar = serializers.SerializerMethodField()
+    banner = serializers.SerializerMethodField()
     online_status = serializers.SerializerMethodField()
 
     def get_avatar(self, obj):
@@ -43,6 +44,14 @@ class UserSerializer(serializers.ModelSerializer):
             return None
         try:
             return obj.avatar.url
+        except Exception:
+            return None
+
+    def get_banner(self, obj):
+        if not obj.banner:
+            return None
+        try:
+            return obj.banner.url
         except Exception:
             return None
 
@@ -54,7 +63,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'avatar', 'online_status']
+        fields = ['id', 'username', 'avatar', 'banner', 'online_status', 'last_seen', 'date_joined']
         read_only_fields = fields
 
 class ProfileSerializer(serializers.ModelSerializer):

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router";
 import AchievementBadges from "../../components/profile/AchievementBadges";
 import MatchHistoryTable from "../../components/profile/MatchHistoryTable";
 import ProfileHero from "../../components/profile/ProfileHero";
@@ -29,7 +30,13 @@ function timeAgo(dateStr: string): string {
 
 const ProfilePage = () => {
   const { user, accessToken } = useAuth();
+  const [searchParams] = useSearchParams();
+  const queryUserId = searchParams.get("user_id");
 
+  const targetUserId = queryUserId ? Number(queryUserId) : user?.id;
+  const isOwnProfile = !queryUserId || Number(queryUserId) === user?.id;
+
+  const [targetUser, setTargetUser] = useState<any>(null);
   const [stats, setStats] = useState<PlayerStats | null>(null);
   const [matches, setMatches] = useState<Match[]>([]);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
@@ -43,10 +50,10 @@ const ProfilePage = () => {
   const totalPages = Math.ceil(totalMatches / PAGE_SIZE);
 
   const fetchMatches = async (page: number) => {
-    if (!user || !accessToken) return;
+    if (!targetUserId || !accessToken) return;
     setMatchesLoading(true);
     try {
-      const data = await profileApi.getMatchHistory(user.id, accessToken, PAGE_SIZE, (page - 1) * PAGE_SIZE);
+      const data = await profileApi.getMatchHistory(targetUserId, accessToken, PAGE_SIZE, (page - 1) * PAGE_SIZE);
       setTotalMatches(data.total);
       setMatches(
         data.results.map((m: any) => {
@@ -70,14 +77,24 @@ const ProfilePage = () => {
   };
 
   useEffect(() => {
-    if (!user || !accessToken) return;
+    if (!targetUserId || !accessToken) return;
+    setLoading(true);
+    setMatchPage(1);
 
     const fetchAll = async () => {
       try {
+        // Fetch target user's public profile if not own profile
+        if (!isOwnProfile) {
+          const publicUser = await profileApi.getUserPublic(targetUserId);
+          setTargetUser(publicUser);
+        } else {
+          setTargetUser(null);
+        }
+
         const [statsData, matchData, achData] = await Promise.all([
-          profileApi.getStats(user.id, accessToken),
-          profileApi.getMatchHistory(user.id, accessToken, PAGE_SIZE, 0),
-          profileApi.getAchievements(user.id, accessToken),
+          profileApi.getStats(targetUserId, accessToken),
+          profileApi.getMatchHistory(targetUserId, accessToken, PAGE_SIZE, 0),
+          profileApi.getAchievements(targetUserId, accessToken),
         ]);
 
         setLevel(statsData.level);
@@ -131,11 +148,20 @@ const ProfilePage = () => {
     };
 
     fetchAll();
-  }, [user, accessToken]);
+  }, [targetUserId, accessToken]);
 
   const handlePageChange = (page: number) => {
     setMatchPage(page);
     fetchMatches(page);
+  };
+
+  const handleAddFriend = async () => {
+    if (!targetUserId || !accessToken) return;
+    try {
+      await profileApi.sendFriendRequest(targetUserId, accessToken);
+    } catch (err) {
+      console.error("Add friend failed", err);
+    }
   };
 
   if (!user) {
@@ -154,22 +180,31 @@ const ProfilePage = () => {
     );
   }
 
+  const displayUser = isOwnProfile ? user : targetUser;
+  if (!displayUser) {
+    return (
+      <div className="flex min-h-full items-center justify-center">
+        <p className="text-slate-400">Kullanıcı bulunamadı</p>
+      </div>
+    );
+  }
+
   const profileData = {
-    username: user.username,
+    username: displayUser.username,
     level,
     rank,
-    avatarUrl: user.avatar || "/profile.jpg",
-    bannerUrl: user.banner || "/banner.jpg",
-    isOnline: user.online_status,
-    lastSeen: user.last_seen,
-    dateJoined: user.date_joined,
+    avatarUrl: displayUser.avatar || "/profile.jpg",
+    bannerUrl: displayUser.banner || "/banner.jpg",
+    isOnline: displayUser.online_status,
+    lastSeen: displayUser.last_seen ?? null,
+    dateJoined: displayUser.date_joined ?? "",
   };
 
   return (
     <div className="px-4 py-8 md:px-6">
       <ProfileHero
-        isOwnProfile={true}
-        onAddFriend={() => {}}
+        isOwnProfile={isOwnProfile}
+        onAddFriend={handleAddFriend}
         profile={profileData}
       />
 
