@@ -364,6 +364,7 @@ class GameRoom {
 
         this.simulationTick++
 
+        // Integrate player movement first, then resolve pairwise collisions.
         Object.values(this.players).forEach((player) => {
             player.update(this.width, this.height)
         })
@@ -376,12 +377,14 @@ class GameRoom {
         }
 
         for (let iteration = 0; iteration < 5; iteration++) {
+            // Multiple solver passes reduce overlap jitter under tight contacts.
             Object.values(this.players).forEach((player) => {
                 checkCollision(player, this.ball)
             })
         }
 
         this.pendingKicks.forEach((ticksRemaining, id) => {
+            // Replay kick impulse for a few ticks so short key taps still register.
             const player = this.players[id]
             if (player) {
                 handleKick(player, this.ball)
@@ -418,6 +421,7 @@ class GameRoom {
         }
 
         if (ball.x - ball.radius < 0) {
+            // Left boundary also acts as blue scoring gate in the goal window.
             if (ball.y > goalTop && ball.y < goalBottom) {
                 this.score.blue++
                 if (this.score.blue >= this.rules.scoreLimit) {
@@ -432,6 +436,7 @@ class GameRoom {
         }
 
         if (ball.x + ball.radius > this.width) {
+            // Right boundary also acts as red scoring gate in the goal window.
             if (ball.y > goalTop && ball.y < goalBottom) {
                 this.score.red++
                 if (this.score.red >= this.rules.scoreLimit) {
@@ -475,6 +480,7 @@ class GameRoom {
         const allReady = this.playerCount > 0 && this.readyPlayers.size === this.playerCount
 
         if (teamsEqual && allReady) {
+            // Match start requires symmetric teams and explicit readiness from everyone.
             this.match.status = "in_progress"
             this.match.startedAt = Date.now()
             this.match.endedAt = null
@@ -525,6 +531,7 @@ class GameRoom {
         this.resetPlayersControlState()
 
         if (this.onMatchFinished) {
+            // Emit compact persistence payload for auth service match/stat storage.
             const redPlayerIds = this.getTeamPlayers("red").map((p) => this.socketToClient[p.id]).filter(Boolean)
             const bluePlayerIds = this.getTeamPlayers("blue").map((p) => this.socketToClient[p.id]).filter(Boolean)
             this.onMatchFinished({
@@ -643,6 +650,7 @@ class GameRoom {
     }
 
     getBroadcastState() {
+        // Keep network payload minimal and deterministic for high-frequency broadcast.
         return {
             players: Object.values(this.players).map((p) => ({
                 id: p.id,

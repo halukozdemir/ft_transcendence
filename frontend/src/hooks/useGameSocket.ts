@@ -10,6 +10,9 @@ const SERVER_H = 500;
 
 const INITIAL_RENDER_DELAY = 100;
 
+/**
+ * Convert raw server payload into the normalized client-side game state shape.
+ */
 function transformState(raw: any): GameState {
   const players = Object.values(raw.players || {}).map((p: any) => ({
     id: p.id,
@@ -92,6 +95,9 @@ function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }
 
+/**
+ * Interpolate between two snapshots to render smooth motion between network ticks.
+ */
 function interpolate(from: GameState, to: GameState, t: number): GameState {
   const ct = Math.max(0, Math.min(1, t));
 
@@ -118,6 +124,9 @@ function interpolate(from: GameState, to: GameState, t: number): GameState {
   };
 }
 
+/**
+ * Manage authenticated game socket connection with snapshot buffering and frame interpolation.
+ */
 export function useGameSocket(accessToken?: string | null, options: UseGameSocketOptions = {}) {
   const socketRef = useRef<Socket | null>(null);
   const [state, setState] = useState<GameState | null>(null);
@@ -166,6 +175,7 @@ export function useGameSocket(accessToken?: string | null, options: UseGameSocke
       const serverTime = raw.meta?.serverTimeMs || performance.now();
       const clientTime = performance.now();
 
+      // Smooth clock offset to avoid abrupt render-time jumps on jittery links.
       const currentOffset = serverTime - clientTime;
       if (serverOffsetRef.current === null) {
         serverOffsetRef.current = currentOffset;
@@ -184,6 +194,7 @@ export function useGameSocket(accessToken?: string | null, options: UseGameSocke
         time: serverTime,
       });
 
+      // Bound buffer size to cap memory and interpolation scan cost.
       if (bufferRef.current.length > 60) {
         bufferRef.current = bufferRef.current.slice(-30);
       }
@@ -232,6 +243,7 @@ export function useGameSocket(accessToken?: string | null, options: UseGameSocke
       const offset = serverOffsetRef.current;
 
       if (buffer.length >= 2 && offset !== null) {
+        // Render slightly in the past to increase chance of having two snapshots.
         const currentServerTime = performance.now() + offset;
         const renderTime = currentServerTime - renderDelayRef.current;
 
@@ -261,6 +273,7 @@ export function useGameSocket(accessToken?: string | null, options: UseGameSocke
         }
 
         while (buffer.length > 5 && buffer[1].time < renderTime) {
+          // Drop obsolete snapshots once they are no longer useful for interpolation.
           buffer.shift();
         }
       } else if (buffer.length === 1) {

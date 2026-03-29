@@ -27,6 +27,7 @@ User = get_user_model()
 
 
 def _safe_media_url(file_field):
+    # Guard against stale DB references or missing files in shared volume storage.
     if not file_field:
         return None
     try:
@@ -119,6 +120,7 @@ class LoginView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED
             )
         
+        # Login heartbeat source of truth: mark user online at successful auth.
         user.online_status=True
         user.save(update_fields=['online_status'])
 
@@ -688,8 +690,10 @@ class MatchResultView(APIView):
         })},
     )
     def post(self, request):
+        """Validate internal match payload, persist result, and update per-player stats/XP."""
         secret = request.headers.get('X-Service-Secret', '')
         expected = getattr(settings, 'SERVICE_SECRET', '')
+        # Reject any non-internal caller before mutating match or stat data.
         if not expected or secret != expected:
             return Response(
                 {'detail': 'Unauthorized service call.'},
@@ -706,6 +710,7 @@ class MatchResultView(APIView):
         end_reason = data.get('end_reason', 'score_limit')
 
         def _normalize_ids(raw_ids):
+            """Best-effort normalize incoming ID list values to integers."""
             normalized = []
             for value in raw_ids or []:
                 try:
@@ -717,6 +722,7 @@ class MatchResultView(APIView):
         red_player_ids = _normalize_ids(red_player_ids_raw)
         blue_player_ids = _normalize_ids(blue_player_ids_raw)
 
+        # Only persisted users participate in rating/stat updates.
         all_ids = red_player_ids + blue_player_ids
         users = {u.id: u for u in User.objects.filter(id__in=all_ids)}
 
@@ -763,12 +769,14 @@ class MatchResultView(APIView):
             is_winner = uid in winner_ids
 
             if is_winner:
+                # Winners receive both goal XP and explicit win bonus.
                 stats.wins += 1
                 stats.xp += team_score * XP_PER_GOAL + XP_WIN_BONUS
             elif uid in loser_ids:
                 stats.losses += 1
                 stats.xp += team_score * XP_PER_GOAL
             else:
+                # Draw path keeps progression moving with a smaller fixed bonus.
                 stats.draws += 1
                 stats.xp += team_score * XP_PER_GOAL + XP_DRAW_BONUS
 
@@ -786,6 +794,7 @@ class MatchResultView(APIView):
         )
 
     def _grant_achievements(self, user, stats, is_winner, opponent_score):
+        """Grant milestone achievements after stat updates if award conditions are met."""
         ACHIEVEMENTS = [
             {
                 'badge_type': 'first_win',
