@@ -95,16 +95,16 @@ services:
     restart: unless-stopped
 
   # ========== 6. AI Service (FastAPI + Uvicorn) ==========
-  # ai_service:
-  #   build:
-  #     context: ./ai_service
-  #     dockerfile: Dockerfile
-  #   container_name: ft_ai
-  #   env_file:
-  #     - .env
-  #   networks:
-  #     - backend_net
-  #   restart: unless-stopped
+  ai_service:
+    build:
+      context: ./ai_service
+      dockerfile: Dockerfile
+    container_name: ft_ai
+    env_file:
+      - .env
+    networks:
+      - backend_net
+    restart: unless-stopped
 
   # ========== Databases & Infrastructure ==========
 
