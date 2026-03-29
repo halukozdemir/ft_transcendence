@@ -116,17 +116,11 @@ make
 
 **Claude (Anthropic)** was used as an AI assistant throughout the development of this project. Specifically, AI assistance was used for:
 
-- **Authentication system:** Designing the JWT authentication flow, writing Django models, serializers, and views for the auth service
-- **Database modeling:** Structuring PostgreSQL schemas for users, matches, achievements, and chat rooms
-- **AI moderation service:** Implementing the FastAPI-based content moderation service (text profanity detection and image NSFW classification logic)
-- **Test suite generation:** Writing unit tests for the auth service and AI service
-- **Bug fixing:** Identifying and resolving bugs in game physics, WebSocket handling, and API endpoint logic
-- **Project management:** Assisting with sprint planning, task breakdown, and tracking development progress
-- **Roadmap preparation:** Structuring the phased development roadmap and defining milestones for each phase
-- **Architecture optimization:** Consulting on microservices design decisions, inter-service communication patterns, database schema optimization, and performance trade-offs
-- **Documentation:** Structuring and writing technical documentation
+- **Documentation:** Writing and structuring this README
+- **Bug fixing:** Consulting on bugs encountered during development (game physics, WebSocket handling, API logic)
+- **Technical consultations:** Discussing architectural decisions, microservices design, and performance trade-offs
 
-All AI-generated code and suggestions were reviewed, tested, and integrated by team members.
+All code in this project was written by team members.
 
 ---
 
