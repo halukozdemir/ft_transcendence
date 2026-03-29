@@ -21,6 +21,7 @@ from .serializers import(
     BannerSerializer,
     FriendRequestSerializer,
     PasswordChangeSerializer,
+    DeleteAccountSerializer,
 )
 from .models import PlayerStats, MatchRecord, MatchPlayer, Achievement, UserAchievement
 
@@ -532,6 +533,37 @@ class PasswordChangeView(APIView):
     )
     def post(self, request):
         return self.put(request)
+
+
+# ──────────────── Delete Account ────────────────
+class DeleteAccountView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    @extend_schema(
+        tags=['Auth'],
+        summary='Delete account',
+        description='Permanently deletes the authenticated user account after password confirmation.',
+        request=DeleteAccountSerializer,
+        responses={204: OpenApiResponse(description='Account deleted.')},
+    )
+    def delete(self, request):
+        serializer = DeleteAccountSerializer(
+            data=request.data,
+            context={'request': request}
+        )
+        serializer.is_valid(raise_exception=True)
+        request.user.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @extend_schema(
+        tags=['Auth'],
+        summary='Delete account (POST alias)',
+        description='Alias of DELETE /delete/.',
+        request=DeleteAccountSerializer,
+        responses={204: OpenApiResponse(description='Account deleted.')},
+    )
+    def post(self, request):
+        return self.delete(request)
     
 # ──────────────── Add/Remove Friend ────────────────
 class AddFriendView(APIView):
