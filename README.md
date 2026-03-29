@@ -134,8 +134,8 @@ All AI-generated code and suggestions were reviewed, tested, and integrated by t
 
 | Login         | Role            | Responsibilities                                                             |
 |---------------|-----------------|------------------------------------------------------------------------------|
-| **halozdem**  | Product Owner   | Auth system (JWT, register, login, logout), database schema, AI moderation   |
-| **fkuyumcu**  | Tech Lead       | Docker/DevOps, Nginx gateway, SSL, microservices infrastructure              |
+| **halozdem**  | Product Owner   | Auth system (JWT, register, login, logout), database schema                    |
+| **fkuyumcu**  | Tech Lead       | Docker/DevOps, Nginx gateway, SSL, microservices infrastructure, Ai content moderation |
 | **ayasar**    | Project Manager | Sprint planning (Notion), React frontend pages, UI components (Tailwind CSS) |
 | **aakyuz**    | Developer       | Profile management, chat backend (Channels), game mechanics                  |
 | **emyildir**  | Developer       | API integration (frontend services), game rendering, UI improvements         |
@@ -232,7 +232,7 @@ auth_app_playerstats
 ├── losses (int)
 ├── draws (int)
 ├── xp (int)
-└── level = xp ÷ 100 + 1 (computed)
+└── level = xp
 
 auth_app_matchrecord
 ├── id (PK)
@@ -330,7 +330,7 @@ chat_app_chatroommember
 | Game Physics          | Ball and player physics at 60 FPS server-side             | aakyuz            |
 | Match Reporting       | Game service posts match results to auth service          | aakyuz            |
 | Real-time Chat        | WebSocket-based room chat (DM, channels, tournament rooms)| aakyuz            |
-| Chat Moderation       | AI text profanity detection (English + Turkish)           | halozdem          |
+| Chat Moderation       | AI text profanity detection (English + Turkish)           | fkuyumcu          |
 | Image Moderation      | NSFW avatar detection via Vision Transformer model        | halozdem          |
 | Microservices         | 5 independent backend services orchestrated via Docker    | fkuyumcu          |
 | Nginx Gateway         | SSL termination, reverse proxy, rate limiting             | fkuyumcu          |
@@ -434,9 +434,7 @@ chat_app_chatroommember
 - Implemented user profile management: avatar/banner upload, profile editing, public profile views
 - Built the complete chat service backend: Django Channels consumers, ChatRoom/ChatMessage/ChatRoomMember models, REST endpoints for room CRUD, join/leave, message history
 - Developed core gameplay mechanics in the game service: `GameRoom.js` (room lifecycle, team assignment, score tracking), `Player.js` (physics), `Ball.js` (physics), `physics.js` (collision detection, kick mechanics)
-- Implemented the friend system (add, remove, block, list)
-- Implemented achievements, player stats, and match result recording
-- Integrated game service with auth service for posting match results via service-to-service API
+- Implemented the friend system (add, remove, list)
 
 ### emyildir — Developer
 
@@ -446,3 +444,4 @@ chat_app_chatroommember
 - Built `useGameSocket` hook for real-time game state synchronization
 - Implemented `useGameInput` hook for keyboard-based player controls
 - Made UI improvements across multiple pages (Profile, Friends, Game lobby)
+- Integrated game service with auth service for posting match results via service-to-service API
