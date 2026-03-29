@@ -120,8 +120,6 @@ make
 - **Bug fixing:** Consulting on bugs encountered during development (game physics, WebSocket handling, API logic)
 - **Technical consultations:** Discussing architectural decisions, microservices design, and performance trade-offs
 
-All code in this project was written by team members.
-
 ---
 
 ## Team Information
