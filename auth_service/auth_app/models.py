@@ -51,7 +51,7 @@ class PlayerStats(models.Model):
 
     @property
     def level(self):
-        return self.xp // 100 + 1
+        return self.xp 
 
     class Meta:
         verbose_name_plural = "Player Stats"

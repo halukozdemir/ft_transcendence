@@ -27,17 +27,17 @@ export default function Screen({ state, myPlayerId, connected = false, onLeaveRo
 
   const iWon = Boolean(myTeam && winnerTeam && myTeam === winnerTeam);
 
-  // Check if current player is ready
+  
   const myLobbyPlayer = state?.lobby.players.find((p) => p.id === myPlayerId);
   const amReady = myLobbyPlayer?.ready ?? false;
 
-  // Check if my team's opponent team is full (for switch button)
+  
   const otherTeam = myTeam === "red" ? "blue" : "red";
   const otherTeamCount = state?.room.teams[otherTeam] ?? 0;
   const otherTeamMax = state?.room.maxPlayersPerTeam ?? 1;
   const canSwitch = otherTeamCount < otherTeamMax;
 
-  // Countdown for returning to lobby after match end
+  
   const [returnCountdown, setReturnCountdown] = useState<number | null>(null);
 
   useEffect(() => {

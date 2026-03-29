@@ -42,7 +42,7 @@ const LoginRegisterForm = () => {
         navigate("/");
       }
     } catch (err) {
-      // Error is handled by context
+      
     }
   };
 

@@ -99,14 +99,14 @@ const API_BASE_URL = "/api/game";
 const AUTH_API_BASE = "/api/auth";
 
 export const gameApi = {
-  // Get game render configuration
+  
   getRenderConfig: async (): Promise<GameRenderConfig> => {
     const res = await fetch(`${API_BASE_URL}/render-config/`);
     if (!res.ok) throw new Error(`Get render config failed: ${res.statusText}`);
     return res.json();
   },
 
-  // Get player stats
+  
   getPlayerStats: async (userId: number, accessToken: string): Promise<PlayerStats> => {
     const res = await fetch(`${API_BASE_URL}/stats/${userId}/`, {
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -115,7 +115,7 @@ export const gameApi = {
     return res.json();
   },
 
-  // Get match history
+  
   getMatchHistory: async (userId: number, accessToken: string, limit = 20): Promise<MatchRecord[]> => {
     const res = await fetch(`${API_BASE_URL}/matches/?user_id=${userId}&limit=${limit}`, {
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -124,21 +124,21 @@ export const gameApi = {
     return res.json();
   },
 
-  // Get leaderboard - from auth service
+  
   getLeaderboard: async (limit = 50): Promise<LeaderboardEntry[]> => {
     const res = await fetch(`${AUTH_API_BASE}/leaderboard/?limit=${limit}`);
     if (!res.ok) throw new Error(`Get leaderboard failed: ${res.statusText}`);
     return res.json();
   },
 
-  // Health check
+  
   health: async (): Promise<{ status: string; service: string }> => {
     const res = await fetch(`${API_BASE_URL}/health/`);
     if (!res.ok) throw new Error("Health check failed");
     return res.json();
   },
 
-  // Get active rooms (live)
+  
   getActiveRooms: async (): Promise<ActiveRoomsResponse> => {
     const res = await fetch(`${API_BASE_URL}/rooms/`);
     if (!res.ok) throw new Error(`Get rooms failed: ${res.statusText}`);
@@ -159,7 +159,7 @@ export const gameApi = {
           message = data.error;
         }
       } catch {
-        // keep fallback message
+        
       }
       throw new Error(message);
     }

@@ -26,7 +26,7 @@ class GameRoom {
         }
 
         this.match = {
-            status: "lobby", // lobby | in_progress | finished
+            status: "lobby", 
             startedAt: null,
             endedAt: null,
             endReason: null,
@@ -35,7 +35,7 @@ class GameRoom {
             forfeitTeam: null,
             disconnectedTeam: null,
         }
-        this.readyPlayers = new Set() // clientId set
+        this.readyPlayers = new Set() 
         this.onMatchFinished = typeof options.onMatchFinished === "function" ? options.onMatchFinished : null
 
         const requestedTitle = typeof options.title === "string" ? options.title.trim() : ""
@@ -138,7 +138,7 @@ class GameRoom {
         const clientId = this.normalizeClientId(rawClientId)
         if (!clientId) return false
 
-        // During a match, don't allow new players
+        
         if (this.match.status === "in_progress") return false
 
         const reservedTeam = this.clientTeam[clientId]
@@ -245,12 +245,12 @@ class GameRoom {
         player.team = newTeam
         this.clientTeam[clientId] = newTeam
 
-        // Reposition player in new team
+        
         const { x, y } = this.getSpawnPosition(newTeam)
         player.x = x
         player.y = y
 
-        // Switching team resets ready state for everyone
+        
         this.readyPlayers.clear()
 
         return { ok: true, team: newTeam }
@@ -271,7 +271,7 @@ class GameRoom {
             this.readyPlayers.add(clientId)
         }
 
-        // Check if we can start the match
+        
         this.startMatchIfReady()
 
         return { ok: true, ready: this.readyPlayers.has(clientId) }
@@ -538,13 +538,13 @@ class GameRoom {
             })
         }
 
-        // Return to lobby after a short delay so clients can see the result
+        
         this._returnToLobbyTimeout = setTimeout(() => {
             this._returnToLobbyTimeout = null
             if (this.match.status === "finished" && this.playerCount > 0) {
                 this.resetToLobby()
             }
-        }, 5000) // 5 seconds to show result, then back to lobby
+        }, 5000) 
     }
 
     getTimeRemainingSeconds() {

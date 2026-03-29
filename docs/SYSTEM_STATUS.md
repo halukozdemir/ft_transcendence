@@ -34,7 +34,7 @@ Postgres konteyneri ilk açıldığında çalışan manuel SQL komutlarıdır.
 | :--- | :--- | :--- |
 | **Auth Service** | Aktif (Django ORM) | Tamamlandı. Migrations otomatik çalışıyor. |
 | **Chat Service** | Aktif (Django ORM) | Tamamlandı. `init.sql` tabloları ile entegre. |
-| **Game Service** | **Eksik (RAM'de tutuluyor)** | Maç sonuçları henüz DB'ye yazılmıyor. `// TODO` aşamasında. |
+| **Game Service** | **Eksik (RAM'de tutuluyor)** | Maç sonuçları henüz DB'ye yazılmıyor. `
 
 ## 5. Tespit Edilen Eksikler ve Yapılacaklar
 1. **Game Service DB Entegrasyonu:** Oyun bittiğinde sonuçların `auth_app_matchrecord` tablosuna yazılması sağlanmalı.

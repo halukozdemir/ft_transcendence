@@ -13,7 +13,7 @@ function formatTime(seconds: number): string {
 
 export default function Scoreboard({ score, match }: Props) {
   return (
-    // font-size is the single scale knob — everything inside uses em
+    
     <div
       style={{ fontSize: "clamp(10px, 1.25vw, 16px)" }}
       className="flex items-stretch bg-surface border border-border rounded-[1em] overflow-hidden select-none"

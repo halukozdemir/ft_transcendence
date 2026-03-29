@@ -54,7 +54,7 @@ async function handleResponse(res: Response) {
   }
 
   if (!res.ok) {
-    // Extract error message from Django response
+    
     if (data.detail) throw new Error(data.detail);
     if (data.error) throw new Error(data.error);
     if (typeof data === 'object') {
@@ -68,7 +68,7 @@ async function handleResponse(res: Response) {
   return data;
 }
 
-// Register
+
 export const authApi = {
   register: async (payload: RegisterPayload): Promise<AuthResponse> => {
     const res = await fetch(`${API_BASE_URL}/register/`, {
@@ -79,7 +79,7 @@ export const authApi = {
     return handleResponse(res);
   },
 
-  // Login
+  
   login: async (payload: LoginPayload): Promise<AuthResponse> => {
     const res = await fetch(`${API_BASE_URL}/login/`, {
       method: "POST",
@@ -89,7 +89,7 @@ export const authApi = {
     return handleResponse(res);
   },
 
-  // Logout
+  
   logout: async (refreshToken: string): Promise<void> => {
     await fetch(`${API_BASE_URL}/logout/`, {
       method: "POST",
@@ -98,7 +98,7 @@ export const authApi = {
     });
   },
 
-  // Get Profile
+  
   getProfile: async (accessToken: string): Promise<UserProfile> => {
     const res = await fetch(`${API_BASE_URL}/profile/`, {
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -106,7 +106,7 @@ export const authApi = {
     return handleResponse(res);
   },
 
-  // Refresh Token
+  
   refreshToken: async (refreshToken: string): Promise<{ access: string }> => {
     const res = await fetch(`${API_BASE_URL}/token/refresh/`, {
       method: "POST",
@@ -116,7 +116,7 @@ export const authApi = {
     return handleResponse(res);
   },
 
-  // Update Profile
+  
   updateProfile: async (accessToken: string, payload: { username?: string; avatar?: File; banner?: File }): Promise<UserProfile> => {
     if (payload.avatar) {
       const avatarFormData = new FormData();
@@ -152,14 +152,14 @@ export const authApi = {
       return handleResponse(profileRes);
     }
 
-    // Refresh and return the latest profile after avatar/banner-only updates
+    
     const profileRes = await fetch(`${API_BASE_URL}/profile/`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     return handleResponse(profileRes);
   },
 
-  // Change Password
+  
   changePassword: async (accessToken: string, payload: { old_password: string; new_password: string; new_password2: string }): Promise<void> => {
     const res = await fetch(`${API_BASE_URL}/password/change/`, {
       method: "PUT",
@@ -169,7 +169,7 @@ export const authApi = {
     return handleResponse(res);
   },
 
-  // Delete Account
+  
   deleteAccount: async (accessToken: string, password: string): Promise<void> => {
     const res = await fetch(`${API_BASE_URL}/delete/`, {
       method: "DELETE",
@@ -179,7 +179,7 @@ export const authApi = {
     if (!res.ok) return handleResponse(res);
   },
 
-  // Presence
+  
   setPresence: async (accessToken: string, status: "online" | "offline"): Promise<void> => {
     await fetch(`${API_BASE_URL}/presence/`, {
       method: "POST",

@@ -18,11 +18,11 @@ class Ball {
         this.x += this.vx
         this.y += this.vy
 
-        // Friction
+        
         this.vx *= this.friction
         this.vy *= this.friction
 
-        // Hız çok düşükse sıfırla (stabilite için)
+        
         if (Math.abs(this.vx) < 0.01) this.vx = 0
         if (Math.abs(this.vy) < 0.01) this.vy = 0
     }

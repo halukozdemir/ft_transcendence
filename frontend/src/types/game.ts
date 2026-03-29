@@ -39,7 +39,7 @@ export interface MatchState {
   redTeamName:  string;
   blueTeamName: string;
   round:        number;
-  timeLeft:     number; // seconds
+  timeLeft:     number; 
   status: "lobby" | "in_progress" | "finished";
   endReason: string | null;
   winnerTeam: TeamColor | null;

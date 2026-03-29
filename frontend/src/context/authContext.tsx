@@ -35,7 +35,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setError(null);
   };
 
-  // Fetch user profile when token is available
+  
   useEffect(() => {
     if (accessToken && !user) {
       (async () => {
@@ -43,14 +43,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           await refreshProfile();
         } catch (err) {
           console.error("Failed to fetch profile", err);
-          // Try to refresh token
+          
           if (refreshToken) {
             try {
               const { access } = await authApi.refreshToken(refreshToken);
               setAccessToken(access);
               localStorage.setItem("accessToken", access);
             } catch (refreshErr) {
-              // Clear tokens if refresh fails
+              
               setAccessToken(null);
               setRefreshToken(null);
               localStorage.removeItem("accessToken");
@@ -62,7 +62,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [accessToken, user, refreshToken]);
 
-  // Presence heartbeat — ping every 3s, stops when tab closes
+  
   useEffect(() => {
     if (!accessToken || !user) return;
 
@@ -71,7 +71,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       authApi.setPresence(accessToken, "online");
     }, 3000);
 
-    // Refresh profile every 10s for friend list / status updates
+    
     const profilePoll = setInterval(() => {
       refreshProfile();
     }, 10000);

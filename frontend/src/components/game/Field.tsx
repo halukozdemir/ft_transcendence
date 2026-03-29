@@ -1,10 +1,10 @@
 import { CX, CY, CR, FX, FY, FW, FH, GW, GH, GY } from "../../constants/game";
 
-// ── Stroke tokens ────────────────────────────────────────────────────────────
+
 const LINE = { stroke: "white", strokeOpacity: 0.1,  strokeWidth: 2, fill: "none" } as const;
 const GOAL = { stroke: "white", strokeOpacity: 0.25, strokeWidth: 2              } as const;
 
-// ── Field background + markings (no <svg> root — lives inside GameCanvas) ───
+
 
 export default function Field() {
   return (
@@ -49,7 +49,7 @@ export default function Field() {
   );
 }
 
-// ── Corner arc helper ────────────────────────────────────────────────────────
+
 
 const ARC_R = 22;
 

@@ -7,7 +7,7 @@ const SettingsPage = () => {
   const { user, accessToken, logout, refreshProfile } = useAuth();
   const navigate = useNavigate();
 
-  // --- Profil ---
+  
   const [username, setUsername] = useState(user?.username || "");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -18,14 +18,14 @@ const SettingsPage = () => {
   const avatarRef = useRef<HTMLInputElement>(null);
   const bannerRef = useRef<HTMLInputElement>(null);
 
-  // --- Şifre ---
+  
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [newPassword2, setNewPassword2] = useState("");
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordMsg, setPasswordMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
-  // --- Hesap Silme ---
+  
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);

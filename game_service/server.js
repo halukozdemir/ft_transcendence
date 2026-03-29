@@ -62,7 +62,7 @@ async function reportMatchResult(data) {
   }
 }
 
-// Health check
+
 app.get("/api/game/health/", (req, res) => {
   res.json({ status: "ok", service: "game" });
 });
@@ -86,17 +86,17 @@ app.get("/api/game/render-config/", (req, res) => {
   });
 });
 
-// Get leaderboard from game stats
+
 app.get("/api/game/leaderboard/", (req, res) => {
-  // TODO: Implement leaderboard from game stats DB
-  // This should pull data from auth_service stats
+  
+  
   res.json([]);
 });
 
-// Get player stats
+
 app.get("/api/game/stats/:userId/", (req, res) => {
-  // TODO: Implement player stats endpoint
-  // Should fetch from auth_service PlayerStats model
+  
+  
   res.json({
     user_id: req.params.userId,
     total_matches: 0,
@@ -106,10 +106,10 @@ app.get("/api/game/stats/:userId/", (req, res) => {
   });
 });
 
-// Get match history
+
 app.get("/api/game/matches/", (req, res) => {
-  // TODO: Implement match history
-  // Should fetch from auth_service MatchRecord model
+  
+  
   res.json([]);
 });
 
@@ -124,7 +124,7 @@ const io = new Server(server, {
   pingTimeout: 5000,
 });
 
-// JWT Middleware - verify token from auth header or query
+
 io.use((socket, next) => {
   const token = socket.handshake.auth?.token || socket.handshake.query?.token;
   
@@ -142,11 +142,11 @@ io.use((socket, next) => {
   }
 });
 
-// ── Multi-room matchmaking ──────────────────────────────────────────────────
 
-const rooms = new Map();        // roomId -> GameRoom
-const socketRoom = new Map();   // socket.id -> roomId
-const clientDisplayNames = new Map(); // clientId -> username
+
+const rooms = new Map();        
+const socketRoom = new Map();   
+const clientDisplayNames = new Map(); 
 let roomCounter = 0;
 
 function normalizeDisplayName(value) {
@@ -327,7 +327,7 @@ io.on("connection", (socket) => {
   const roomPasswordRaw = socket.handshake.auth?.roomPassword || socket.handshake.query?.roomPassword;
   const roomPassword = typeof roomPasswordRaw === "string" ? roomPasswordRaw : "";
 
-  // Onceki baglantisi varsa temizle
+  
   for (const [existingRoomId, room] of rooms) {
     const existingSocketId = room.getSocketIdByClientId(clientId);
     if (existingSocketId && existingSocketId !== socket.id) {
@@ -355,7 +355,7 @@ io.on("connection", (socket) => {
       return;
     }
   } else {
-    // Quick match: bos oda bul veya yeni olustur
+    
     room = findJoinableRoom();
     if (!room) {
       room = createRoom();
@@ -468,7 +468,7 @@ io.on("connection", (socket) => {
         playerCount: r.playerCount,
       });
 
-      // Push immediate state after a leave event so clients can show waiting UI instantly.
+      
       if (r.playerCount > 0) {
         io.to(rId).emit("state", r.getState());
       }
@@ -482,7 +482,7 @@ io.on("connection", (socket) => {
   });
 });
 
-// ── Simulation & broadcast ──────────────────────────────────────────────────
+
 
 const simulationTickMs = 1000 / simulationFps;
 const broadcastTickMs = 1000 / broadcastFps;
@@ -497,7 +497,7 @@ setInterval(() => {
   for (const [roomId, room] of rooms) {
     io.to(roomId).emit("state", room.getBroadcastState());
   }
-  // Cleanup empty rooms
+  
   for (const roomId of rooms.keys()) {
     cleanupRoom(roomId);
   }

@@ -66,7 +66,7 @@ export interface UserProfile {
 const API_BASE_URL = "/api/auth";
 
 export const profileApi = {
-  // Get all users (for friends discovery)
+  
   getAllUsers: async (accessToken: string, search?: string, limit?: number): Promise<Friend[]> => {
     let url = `${API_BASE_URL}/users/`;
     const params = new URLSearchParams();
@@ -81,7 +81,7 @@ export const profileApi = {
     return res.json();
   },
 
-  // Get user profile (same as authApi, but included here for convenience)
+  
   getProfile: async (accessToken: string): Promise<UserProfile> => {
     const res = await fetch(`${API_BASE_URL}/profile/`, {
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -90,14 +90,14 @@ export const profileApi = {
     return res.json();
   },
 
-  // Get user by ID (public profile)
+  
   getUserPublic: async (userId: number): Promise<Partial<UserProfile>> => {
     const res = await fetch(`${API_BASE_URL}/users/${userId}/`);
     if (!res.ok) throw new Error(`Get user failed: ${res.statusText}`);
     return res.json();
   },
 
-  // Update profile
+  
   updateProfile: async (
     accessToken: string,
     data: { username?: string; bio?: string }
@@ -114,7 +114,7 @@ export const profileApi = {
     return res.json();
   },
 
-  // Get user statistics
+  
   getStats: async (userId: number, accessToken: string): Promise<ProfileStats> => {
     const res = await fetch(`${API_BASE_URL}/users/${userId}/stats/`, {
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -123,7 +123,7 @@ export const profileApi = {
     return res.json();
   },
 
-  // Get match history
+  
   getMatchHistory: async (
     userId: number,
     accessToken: string,
@@ -137,7 +137,7 @@ export const profileApi = {
     return res.json();
   },
 
-  // Get achievements
+  
   getAchievements: async (userId: number, accessToken: string): Promise<Achievement[]> => {
     const res = await fetch(`${API_BASE_URL}/users/${userId}/achievements/`, {
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -146,7 +146,7 @@ export const profileApi = {
     return res.json();
   },
 
-  // Get friends list
+  
   getFriends: async (accessToken: string): Promise<Friend[]> => {
     const res = await fetch(`${API_BASE_URL}/friends/`, {
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -155,7 +155,7 @@ export const profileApi = {
     return res.json();
   },
 
-  // Get friend requests
+  
   getFriendRequests: async (accessToken: string): Promise<Friend[]> => {
     const res = await fetch(`${API_BASE_URL}/friends/requests/`, {
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -164,7 +164,7 @@ export const profileApi = {
     return res.json();
   },
 
-  // Send friend request
+  
   sendFriendRequest: async (targetUserId: number, accessToken: string): Promise<{ sent: boolean }> => {
     const res = await fetch(`${API_BASE_URL}/friends/add/`, {
       method: "POST",
@@ -178,7 +178,7 @@ export const profileApi = {
     return res.json();
   },
 
-  // Accept friend request
+  
   acceptFriendRequest: async (friendUserId: number, accessToken: string): Promise<{ accepted: boolean }> => {
     const res = await fetch(`${API_BASE_URL}/friends/accept/`, {
       method: "POST",
@@ -192,7 +192,7 @@ export const profileApi = {
     return res.json();
   },
 
-  // Remove friend
+  
   removeFriend: async (friendUserId: number, accessToken: string): Promise<void> => {
     const res = await fetch(`${API_BASE_URL}/friends/${friendUserId}/`, {
       method: "DELETE",
@@ -203,7 +203,7 @@ export const profileApi = {
     if (!res.ok) throw new Error(`Remove friend failed: ${res.statusText}`);
   },
 
-  // Block user
+  
   blockUser: async (userId: number, accessToken: string): Promise<{ blocked: boolean }> => {
     const res = await fetch(`${API_BASE_URL}/users/block/`, {
       method: "POST",
@@ -217,7 +217,7 @@ export const profileApi = {
     return res.json();
   },
 
-  // Unblock user
+  
   unblockUser: async (userId: number, accessToken: string): Promise<{ unblocked: boolean }> => {
     const res = await fetch(`${API_BASE_URL}/users/unblock/`, {
       method: "POST",
@@ -231,7 +231,7 @@ export const profileApi = {
     return res.json();
   },
 
-  // Get blocked users
+  
   getBlockedUsers: async (accessToken: string): Promise<BlockedUser[]> => {
     const res = await fetch(`${API_BASE_URL}/users/blocked/`, {
       headers: { Authorization: `Bearer ${accessToken}` },

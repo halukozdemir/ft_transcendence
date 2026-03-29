@@ -67,7 +67,7 @@ export default function Chat({ roomName = "game", username = "Player" }: ChatPro
   const socketRef = useRef<WebSocket | null>(null);
   const [connected, setConnected] = useState(false);
 
-  // Enter key focuses input
+  
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Enter" && document.activeElement !== inputRef.current)
@@ -77,7 +77,7 @@ export default function Chat({ roomName = "game", username = "Player" }: ChatPro
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  // Populate ghosts when chat closes, clear when opens
+  
   useEffect(() => {
     if (open) {
       setGhosts([]);
@@ -281,7 +281,7 @@ export default function Chat({ roomName = "game", username = "Player" }: ChatPro
   );
 }
 
-// ── Message components ──────────────────────────────────────────────────────
+
 
 function ChatMsg({ msg }: { msg: PlayerMessage }) {
   return (
@@ -310,7 +310,7 @@ function SystemMsg({ content }: { content: string }) {
   );
 }
 
-// Ghost variants — no backgrounds, just text
+
 function GhostChatMsg({ msg }: { msg: PlayerMessage }) {
   return (
     <p className="text-sm leading-snug px-1 drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]">

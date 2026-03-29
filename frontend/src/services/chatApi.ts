@@ -44,28 +44,28 @@ export interface CreateChatRoomPayload {
 const API_BASE_URL = "/api/chat";
 
 export const chatApi = {
-  // List all rooms
+  
   listRooms: async (): Promise<ChatRoomList[]> => {
     const res = await fetch(`${API_BASE_URL}/rooms/`);
     if (!res.ok) throw new Error(`List rooms failed: ${res.statusText}`);
     return res.json();
   },
 
-  // Get rooms for authenticated user
+  
   getMyRooms: async (userId: number): Promise<ChatRoomList[]> => {
     const res = await fetch(`${API_BASE_URL}/rooms/my_rooms/?user_id=${userId}`);
     if (!res.ok) throw new Error(`Get my rooms failed: ${res.statusText}`);
     return res.json();
   },
 
-  // Get room details with messages
+  
   getRoomDetail: async (roomId: number): Promise<ChatRoomDetail> => {
     const res = await fetch(`${API_BASE_URL}/rooms/${roomId}/`);
     if (!res.ok) throw new Error(`Get room failed: ${res.statusText}`);
     return res.json();
   },
 
-  // Create new room
+  
   createRoom: async (payload: CreateChatRoomPayload): Promise<ChatRoomList> => {
     const res = await fetch(`${API_BASE_URL}/rooms/`, {
       method: "POST",
@@ -76,7 +76,7 @@ export const chatApi = {
     return res.json();
   },
 
-  // Send message to room
+  
   sendMessage: async (
     roomId: number,
     text: string,
@@ -96,7 +96,7 @@ export const chatApi = {
     return res.json();
   },
 
-  // Get room messages with pagination
+  
   getRoomMessages: async (
     roomId: number,
     limit: number = 50,
@@ -109,7 +109,7 @@ export const chatApi = {
     return res.json();
   },
 
-  // Join room
+  
   joinRoom: async (roomId: number, userId: number): Promise<{ joined: boolean; room_id: number }> => {
     const res = await fetch(`${API_BASE_URL}/rooms/${roomId}/join/`, {
       method: "POST",
@@ -120,7 +120,7 @@ export const chatApi = {
     return res.json();
   },
 
-  // Leave room
+  
   leaveRoom: async (roomId: number, userId: number): Promise<{ left: boolean }> => {
     const res = await fetch(`${API_BASE_URL}/rooms/${roomId}/leave/`, {
       method: "POST",
@@ -131,7 +131,7 @@ export const chatApi = {
     return res.json();
   },
 
-  // Health check
+  
   health: async (): Promise<{ status: string; service: string }> => {
     const res = await fetch(`${API_BASE_URL}/health/`);
     if (!res.ok) throw new Error("Health check failed");

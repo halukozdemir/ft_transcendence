@@ -143,13 +143,13 @@ const ProfilePage = () => {
     }
   };
 
-  // Initial fetch
+  
   useEffect(() => {
     setMatchPage(1);
     fetchAll();
   }, [targetUserId, accessToken]);
 
-  // Poll every 5s for presence/data updates
+  
   useEffect(() => {
     if (!targetUserId || !accessToken) return;
     const interval = setInterval(() => fetchAll(false), 5000);

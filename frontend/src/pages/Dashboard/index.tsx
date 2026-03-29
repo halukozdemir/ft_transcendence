@@ -30,7 +30,7 @@ const DashboardPage = () => {
   const [roomsLoading, setRoomsLoading] = useState(true);
   const [playerStats, setPlayerStats] = useState<PlayerStats | null>(null);
 
-  // Fetch player stats
+  
   useEffect(() => {
     if (!user || !accessToken) return;
     profileApi.getStats(user.id, accessToken)
@@ -44,7 +44,7 @@ const DashboardPage = () => {
       .catch(() => {});
   }, [user, accessToken]);
 
-  // Fetch active rooms
+  
   useEffect(() => {
     let isCancelled = false;
 
@@ -158,7 +158,7 @@ const DashboardPage = () => {
     initials: f.username.slice(0, 2).toUpperCase(),
   }));
 
-  // XP progress within current level (each level = 100 XP)
+  
   const level = playerStats?.level ?? 1;
   const xp = playerStats?.xp ?? 0;
   const xpInLevel = xp % 100;

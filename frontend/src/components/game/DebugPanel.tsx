@@ -56,7 +56,7 @@ export default function DebugPanel({ socketRef, debug, connected }: Props) {
   const logRef = useRef<LogEntry[]>([]);
   const logBoxRef = useRef<HTMLDivElement>(null);
 
-  // Toggle with backtick
+  
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "`") {
@@ -68,7 +68,7 @@ export default function DebugPanel({ socketRef, debug, connected }: Props) {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  // FPS counter
+  
   useEffect(() => {
     let raf = 0;
     function frame(now: number) {
@@ -83,7 +83,7 @@ export default function DebugPanel({ socketRef, debug, connected }: Props) {
     return () => cancelAnimationFrame(raf);
   }, []);
 
-  // Update stats at 4fps
+  
   useEffect(() => {
     if (!open) return;
     const iv = setInterval(() => {
@@ -99,7 +99,7 @@ export default function DebugPanel({ socketRef, debug, connected }: Props) {
     return () => clearInterval(iv);
   }, [open, debug]);
 
-  // Socket event logger
+  
   const addLog = useCallback((event: string, detail: string) => {
     const entry: LogEntry = { time: ts(), event, detail };
     logRef.current = [...logRef.current.slice(-99), entry];
@@ -131,12 +131,12 @@ export default function DebugPanel({ socketRef, debug, connected }: Props) {
     };
   }, [socketRef, addLog]);
 
-  // Auto-scroll log
+  
   useEffect(() => {
     logBoxRef.current?.scrollTo(0, logBoxRef.current.scrollHeight);
   }, [logs]);
 
-  // Send config change
+  
   const handleSlider = (key: string, value: number) => {
     setConfig((c) => ({ ...c, [key]: value }));
     if (key === "renderDelay") {

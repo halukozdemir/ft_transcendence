@@ -3,11 +3,11 @@ import { io, Socket } from "socket.io-client";
 import type { GameState, PlayerState, BallState, LobbyState } from "../types/game";
 import { FX, FY, FW, FH } from "../constants/game";
 
-// Backend field dimensions
+
 const SERVER_W = 800;
 const SERVER_H = 500;
 
-// How far behind real-time we render (ms).
+
 const INITIAL_RENDER_DELAY = 100;
 
 function transformState(raw: any): GameState {
@@ -226,7 +226,7 @@ export function useGameSocket(accessToken?: string | null, options: UseGameSocke
       }
     });
 
-    // Snapshot interpolation loop
+    
     function tick() {
       const buffer = bufferRef.current;
       const offset = serverOffsetRef.current;

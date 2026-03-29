@@ -24,7 +24,7 @@ const FriendsPage = () => {
     }
   };
 
-  // Initial fetch + debounced search
+  
   useEffect(() => {
     const delayTimer = setTimeout(() => {
       fetchUsers();
@@ -32,7 +32,7 @@ const FriendsPage = () => {
     return () => clearTimeout(delayTimer);
   }, [searchText, accessToken]);
 
-  // Poll every 5s for presence updates
+  
   useEffect(() => {
     if (!accessToken) return;
     const interval = setInterval(() => fetchUsers(false), 5000);
@@ -44,7 +44,7 @@ const FriendsPage = () => {
     try {
       await profileApi.sendFriendRequest(targetUserId, accessToken);
       setMessage({ type: "ok", text: "Arkadaş eklendi!" });
-      // Refresh users
+      
       const result = await profileApi.getAllUsers(accessToken, searchText || undefined, 100);
       setUsers(result);
     } catch (err) {
@@ -57,7 +57,7 @@ const FriendsPage = () => {
     try {
       await profileApi.removeFriend(targetUserId, accessToken);
       setMessage({ type: "ok", text: "Arkadaş çıkarıldı" });
-      // Refresh users
+      
       const result = await profileApi.getAllUsers(accessToken, searchText || undefined, 100);
       setUsers(result);
     } catch (err) {
