@@ -15,5 +15,12 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 80,
+    strictPort: true,
+    hmr: {
+      protocol: 'wss',
+      host: 'localhost',
+      clientPort: 8443,
+      path: '/__vite_hmr',
+    },
   },
 })

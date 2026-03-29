@@ -24,6 +24,21 @@ from .models import PlayerStats, MatchRecord, MatchPlayer, Achievement, UserAchi
 
 User = get_user_model()
 
+
+def _safe_media_url(file_field):
+    if not file_field:
+        return None
+    try:
+        name = getattr(file_field, 'name', None)
+        storage = getattr(file_field, 'storage', None)
+        if not name or storage is None:
+            return None
+        if not storage.exists(name):
+            return None
+        return file_field.url
+    except Exception:
+        return None
+
 # ──────────────── Register ────────────────
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
@@ -239,7 +254,7 @@ class UserMatchHistoryView(APIView):
                     {
                         'id': op.user.id,
                         'username': op.user.username,
-                        'avatar': op.user.avatar.url if op.user.avatar else None,
+                        'avatar': _safe_media_url(op.user.avatar),
                     }
                     for op in opponents
                 ],
@@ -295,7 +310,7 @@ class LeaderboardView(APIView):
                 'rank': rank,
                 'user_id': user.id,
                 'username': user.username,
-                'avatar': user.avatar.url if user.avatar else None,
+                'avatar': _safe_media_url(user.avatar),
                 'xp': user.stats.xp,
                 'level': user.stats.level,
                 'total_matches': user.stats.total_matches,
@@ -333,7 +348,7 @@ class AllUsersView(APIView):
             result.append({
                 'id': user.id,
                 'username': user.username,
-                'avatar': user.avatar.url if user.avatar else None,
+                'avatar': _safe_media_url(user.avatar),
                 'online_status': bool(is_online),
                 'is_friend': request.user.friends.filter(id=user.id).exists(),
             })

@@ -4,6 +4,21 @@ from django.contrib.auth.password_validation import validate_password
 
 User = get_user_model()
 
+
+def _safe_media_url(file_field):
+    if not file_field:
+        return None
+    try:
+        name = getattr(file_field, 'name', None)
+        storage = getattr(file_field, 'storage', None)
+        if not name or storage is None:
+            return None
+        if not storage.exists(name):
+            return None
+        return file_field.url
+    except Exception:
+        return None
+
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
         write_only=True,
@@ -40,20 +55,10 @@ class UserSerializer(serializers.ModelSerializer):
     online_status = serializers.SerializerMethodField()
 
     def get_avatar(self, obj):
-        if not obj.avatar:
-            return None
-        try:
-            return obj.avatar.url
-        except Exception:
-            return None
+        return _safe_media_url(obj.avatar)
 
     def get_banner(self, obj):
-        if not obj.banner:
-            return None
-        try:
-            return obj.banner.url
-        except Exception:
-            return None
+        return _safe_media_url(obj.banner)
 
     def get_online_status(self, obj):
         if not obj.last_seen:
@@ -76,20 +81,10 @@ class ProfileSerializer(serializers.ModelSerializer):
     )
 
     def get_avatar(self, obj):
-        if not obj.avatar:
-            return None
-        try:
-            return obj.avatar.url
-        except Exception:
-            return None
+        return _safe_media_url(obj.avatar)
 
     def get_banner(self, obj):
-        if not obj.banner:
-            return None
-        try:
-            return obj.banner.url
-        except Exception:
-            return None
+        return _safe_media_url(obj.banner)
 
     def get_online_status(self, obj):
         if not obj.last_seen:
