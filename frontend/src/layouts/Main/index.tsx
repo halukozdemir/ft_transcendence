@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { dashboardThemeVars } from "../../constants/appColors";
 import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
-
 interface MainLayoutProps {
   children: ReactNode;
 }

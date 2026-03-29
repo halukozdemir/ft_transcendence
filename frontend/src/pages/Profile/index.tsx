@@ -8,7 +8,6 @@ import { useAuth } from "../../context/authContext";
 import { profileApi } from "../../services/profileApi";
 import type { Achievement, Match, PlayerStats } from "../../types/profile";
 import type { AchievementType } from "../../types/profile";
-
 const BADGE_TYPE_MAP: Record<string, AchievementType> = {
   first_win: "verified",
   streak_5: "streak",
@@ -17,15 +16,38 @@ const BADGE_TYPE_MAP: Record<string, AchievementType> = {
   tournament_champion: "tournament",
 };
 
+const ACHIEVEMENT_TEXT_MAP: Record<string, { title: string; description: string }> = {
+  first_win: {
+    title: "First Win",
+    description: "Win your first match.",
+  },
+  streak_5: {
+    title: "Win Streak",
+    description: "Win 5 matches in a row.",
+  },
+  unstoppable: {
+    title: "Unstoppable",
+    description: "Achieve a dominant winning streak.",
+  },
+  perfect_win: {
+    title: "Perfect Win",
+    description: "Win a match without conceding.",
+  },
+  tournament_champion: {
+    title: "Tournament Champion",
+    description: "Win a tournament final.",
+  },
+};
+
 const PAGE_SIZE = 5;
 
 function timeAgo(dateStr: string): string {
   const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-  if (diff < 60) return "Az önce";
-  if (diff < 3600) return `${Math.floor(diff / 60)} dakika önce`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)} saat önce`;
-  if (diff < 172800) return "Dün";
-  return `${Math.floor(diff / 86400)} gün önce`;
+  if (diff < 60) return "Just now";
+  if (diff < 3600) return `${Math.floor(diff / 60)} minutes ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
+  if (diff < 172800) return "Yesterday";
+  return `${Math.floor(diff / 86400)} days ago`;
 }
 
 const ProfilePage = () => {
@@ -57,7 +79,7 @@ const ProfilePage = () => {
       setTotalMatches(data.total);
       setMatches(
         data.results.map((m: any) => {
-          const opponentNames = m.opponents?.map((o: any) => o.username).join(", ") || `Maç #${m.id}`;
+          const opponentNames = m.opponents?.map((o: any) => o.username).join(", ") || `Match #${m.id}`;
           const result = (m.result as string).toUpperCase() as "WIN" | "LOSS" | "DRAW";
           return {
             id: String(m.id),
@@ -103,8 +125,8 @@ const ProfilePage = () => {
         level: statsData.level,
         xpInLevel: statsData.xp % 100,
         xpGoal: 100,
-        goalsScored: 0,
-        goalsPerGame: 0,
+        goalsScored: statsData.goals_scored ?? 0,
+        goalsPerGame: statsData.goals_per_game ?? 0,
         offenseRating: 0,
         defenseRating: 0,
         weeklyMatches: 0,
@@ -113,7 +135,7 @@ const ProfilePage = () => {
       setTotalMatches(matchData.total);
       setMatches(
         matchData.results.map((m: any) => {
-          const opponentNames = m.opponents?.map((o: any) => o.username).join(", ") || `Maç #${m.id}`;
+          const opponentNames = m.opponents?.map((o: any) => o.username).join(", ") || `Match #${m.id}`;
           const result = (m.result as string).toUpperCase() as "WIN" | "LOSS" | "DRAW";
           return {
             id: String(m.id),
@@ -127,14 +149,17 @@ const ProfilePage = () => {
       );
 
       setAchievements(
-        achData.map((a: any) => ({
-          id: String(a.id),
-          type: BADGE_TYPE_MAP[a.badge_type] ?? "special",
-          icon: a.icon_url,
-          title: a.name,
-          description: a.description,
-          unlockedAt: new Date(a.unlocked_at),
-        }))
+        achData.map((a: any) => {
+          const localized = ACHIEVEMENT_TEXT_MAP[a.badge_type];
+          return {
+            id: String(a.id),
+            type: BADGE_TYPE_MAP[a.badge_type] ?? "special",
+            icon: a.icon_url,
+            title: localized?.title ?? a.name,
+            description: localized?.description ?? a.description,
+            unlockedAt: new Date(a.unlocked_at),
+          };
+        })
       );
     } catch (err) {
       console.error("Profile data fetch failed", err);
@@ -164,7 +189,7 @@ const ProfilePage = () => {
   if (!user) {
     return (
       <div className="flex min-h-full items-center justify-center">
-        <p className="text-slate-400">Profil yükleniyor...</p>
+        <p className="text-slate-400">Loading profile...</p>
       </div>
     );
   }
@@ -172,7 +197,7 @@ const ProfilePage = () => {
   if (loading) {
     return (
       <div className="flex min-h-full items-center justify-center">
-        <p className="text-slate-400">İstatistikler yükleniyor...</p>
+        <p className="text-slate-400">Loading statistics...</p>
       </div>
     );
   }
@@ -181,7 +206,7 @@ const ProfilePage = () => {
   if (!displayUser) {
     return (
       <div className="flex min-h-full items-center justify-center">
-        <p className="text-slate-400">Kullanıcı bulunamadı</p>
+        <p className="text-slate-400">User not found</p>
       </div>
     );
   }

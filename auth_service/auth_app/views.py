@@ -5,7 +5,7 @@ from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate, get_user_model
-from django.db.models import Q, Count, F, Case, When, IntegerField
+from django.db.models import Q, Count, F, Case, When, IntegerField, Sum
 from django.conf import settings
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiResponse, inline_serializer
 from rest_framework import serializers as s
@@ -27,6 +27,7 @@ User = get_user_model()
 
 
 def _safe_media_url(file_field):
+    # Guard against stale DB references or missing files in shared volume storage.
     if not file_field:
         return None
     try:
@@ -119,6 +120,7 @@ class LoginView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED
             )
         
+        # Login heartbeat source of truth: mark user online at successful auth.
         user.online_status=True
         user.save(update_fields=['online_status'])
 
@@ -258,6 +260,8 @@ class UserStatsView(APIView):
             'wins': s.IntegerField(),
             'losses': s.IntegerField(),
             'win_rate': s.FloatField(),
+            'goals_scored': s.IntegerField(),
+            'goals_per_game': s.FloatField(),
             'xp': s.IntegerField(),
             'level': s.IntegerField(),
             'ranking': s.IntegerField(),
@@ -271,6 +275,19 @@ class UserStatsView(APIView):
         
         stats = PlayerStats.objects.get_or_create(user=user)[0]
 
+        goals_scored = MatchPlayer.objects.filter(user=user).aggregate(
+            total=Sum(
+                Case(
+                    When(team='red', then=F('match__score_red')),
+                    When(team='blue', then=F('match__score_blue')),
+                    default=0,
+                    output_field=IntegerField(),
+                )
+            )
+        ).get('total') or 0
+
+        goals_per_game = round(goals_scored / stats.total_matches, 2) if stats.total_matches > 0 else 0.0
+
         higher_xp = PlayerStats.objects.filter(xp__gt=stats.xp).count()
         ranking = higher_xp + 1
 
@@ -281,6 +298,8 @@ class UserStatsView(APIView):
             'wins': stats.wins,
             'losses': stats.losses,
             'win_rate': stats.win_rate,
+            'goals_scored': goals_scored,
+            'goals_per_game': goals_per_game,
             'xp': stats.xp,
             'level': stats.level,
             'ranking': ranking,
@@ -688,8 +707,10 @@ class MatchResultView(APIView):
         })},
     )
     def post(self, request):
+        """Validate internal match payload, persist result, and update per-player stats/XP."""
         secret = request.headers.get('X-Service-Secret', '')
         expected = getattr(settings, 'SERVICE_SECRET', '')
+        # Reject any non-internal caller before mutating match or stat data.
         if not expected or secret != expected:
             return Response(
                 {'detail': 'Unauthorized service call.'},
@@ -706,6 +727,7 @@ class MatchResultView(APIView):
         end_reason = data.get('end_reason', 'score_limit')
 
         def _normalize_ids(raw_ids):
+            """Best-effort normalize incoming ID list values to integers."""
             normalized = []
             for value in raw_ids or []:
                 try:
@@ -717,6 +739,7 @@ class MatchResultView(APIView):
         red_player_ids = _normalize_ids(red_player_ids_raw)
         blue_player_ids = _normalize_ids(blue_player_ids_raw)
 
+        # Only persisted users participate in rating/stat updates.
         all_ids = red_player_ids + blue_player_ids
         users = {u.id: u for u in User.objects.filter(id__in=all_ids)}
 
@@ -763,12 +786,14 @@ class MatchResultView(APIView):
             is_winner = uid in winner_ids
 
             if is_winner:
+                # Winners receive both goal XP and explicit win bonus.
                 stats.wins += 1
                 stats.xp += team_score * XP_PER_GOAL + XP_WIN_BONUS
             elif uid in loser_ids:
                 stats.losses += 1
                 stats.xp += team_score * XP_PER_GOAL
             else:
+                # Draw path keeps progression moving with a smaller fixed bonus.
                 stats.draws += 1
                 stats.xp += team_score * XP_PER_GOAL + XP_DRAW_BONUS
 
@@ -786,32 +811,33 @@ class MatchResultView(APIView):
         )
 
     def _grant_achievements(self, user, stats, is_winner, opponent_score):
+        """Grant milestone achievements after stat updates if award conditions are met."""
         ACHIEVEMENTS = [
             {
                 'badge_type': 'first_win',
-                'name': 'İlk Galibiyet',
-                'description': 'İlk maçını kazan.',
+                'name': 'First Victory',
+                'description': 'Win your first match.',
                 'icon_url': 'verified',
                 'condition': lambda: is_winner and stats.wins == 1,
             },
             {
                 'badge_type': 'perfect_win',
-                'name': 'Kusursuz Galibiyet',
-                'description': 'Rakibe gol attırmadan kazan.',
+                'name': 'Perfect Victory',
+                'description': 'Win without conceding a goal.',
                 'icon_url': 'emoji_events',
                 'condition': lambda: is_winner and opponent_score == 0,
             },
             {
                 'badge_type': 'streak_5',
-                'name': '5 Galibiyet Serisi',
-                'description': 'Üst üste 5 maç kazan.',
+                'name': '5-Win Streak',
+                'description': 'Win 5 matches in a row.',
                 'icon_url': 'local_fire_department',
                 'condition': lambda: stats.wins >= 5 and stats.wins % 5 == 0,
             },
             {
                 'badge_type': 'unstoppable',
-                'name': 'Durdurulamaz',
-                'description': '20 galibiyet serisine ulaş.',
+                'name': 'Unstoppable',
+                'description': 'Reach a 20-win streak.',
                 'icon_url': 'local_fire_department',
                 'condition': lambda: stats.wins >= 20 and stats.wins % 20 == 0,
             },

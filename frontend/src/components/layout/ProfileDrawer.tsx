@@ -1,7 +1,6 @@
 import { useNavigate } from "react-router";
 import { useAuth } from "../../context/authContext";
 import AppIcon from "../ui/AppIcon";
-
 interface ProfileDrawerProps {
   open: boolean;
   onClose: () => void;
@@ -26,7 +25,7 @@ const ProfileDrawer = ({ open, onClose }: ProfileDrawerProps) => {
 
   return (
     <>
-      {/* Backdrop */}
+      
       <div
         className={`fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${
           open ? "opacity-100" : "pointer-events-none opacity-0"
@@ -34,15 +33,15 @@ const ProfileDrawer = ({ open, onClose }: ProfileDrawerProps) => {
         onClick={onClose}
       />
 
-      {/* Drawer */}
+      
       <div
         className={`fixed top-0 right-0 z-50 flex h-full w-72 flex-col bg-[var(--dashboard-card)] shadow-2xl transition-transform duration-300 ease-in-out ${
           open ? "translate-x-0" : "translate-x-full"
         }`}
       >
-        {/* Header */}
+        
         <div className="flex items-center justify-between border-b border-[var(--dashboard-border)] px-5 py-4">
-          <span className="text-sm font-semibold text-white">Menü</span>
+          <span className="text-sm font-semibold text-white">Menu</span>
           <button
             className="cursor-pointer rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-[var(--dashboard-border)] hover:text-white"
             onClick={onClose}
@@ -53,7 +52,7 @@ const ProfileDrawer = ({ open, onClose }: ProfileDrawerProps) => {
           </button>
         </div>
 
-        {/* Profile */}
+        
         <button
           className="cursor-pointer flex items-center gap-4 border-b border-[var(--dashboard-border)] px-5 py-5 text-left transition-colors hover:bg-white/5"
           onClick={() => go("/profile")}
@@ -73,13 +72,13 @@ const ProfileDrawer = ({ open, onClose }: ProfileDrawerProps) => {
           </div>
         </button>
 
-        {/* Nav links */}
+        
         <nav className="flex flex-col gap-1 px-3 py-4">
           {[
-            { label: "Lobi",         path: "/",            icon: "brand"         },
-            { label: "Profil",       path: "/profile",     icon: "verified"      },
-            { label: "Liderlik Tablosu", path: "/leaderboard", icon: "filter"    },
-            { label: "Ayarlar",      path: "/settings",    icon: "settings"      },
+            { label: "Lobby",       path: "/",            icon: "brand"         },
+            { label: "Profile",     path: "/profile",     icon: "verified"      },
+            { label: "Leaderboard", path: "/leaderboard", icon: "filter"        },
+            { label: "Settings",    path: "/settings",    icon: "settings"      },
           ].map(({ label, path, icon }) => (
             <button
               key={label}
@@ -93,7 +92,7 @@ const ProfileDrawer = ({ open, onClose }: ProfileDrawerProps) => {
           ))}
         </nav>
 
-        {/* Logout */}
+        
         <div className="mt-auto border-t border-[var(--dashboard-border)] px-3 py-4">
           <button
             className="cursor-pointer flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-red-400 transition-colors hover:bg-red-500/10 hover:text-red-300"
@@ -101,7 +100,7 @@ const ProfileDrawer = ({ open, onClose }: ProfileDrawerProps) => {
             type="button"
           >
             <AppIcon name="join" size={18} />
-            Çıkış Yap
+            Log Out
           </button>
         </div>
       </div>

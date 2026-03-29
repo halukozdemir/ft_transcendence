@@ -68,7 +68,6 @@ async function handleResponse(res: Response) {
   return data;
 }
 
-
 export const authApi = {
   register: async (payload: RegisterPayload): Promise<AuthResponse> => {
     const res = await fetch(`${API_BASE_URL}/register/`, {

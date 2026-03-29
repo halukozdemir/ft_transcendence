@@ -1,22 +1,5 @@
 import type { IconType } from "react-icons";
-import {
-  MdAddCircleOutline,
-  MdBolt,
-  MdCampaign,
-  MdChevronLeft,
-  MdChevronRight,
-  MdFilterList,
-  MdHelpOutline,
-  MdLock,
-  MdLogin,
-  MdMailOutline,
-  MdNotificationsNone,
-  MdSearch,
-  MdSettings,
-  MdSportsSoccer,
-  MdVerifiedUser,
-} from "react-icons/md";
-
+import { MdAddCircleOutline, MdBolt, MdCampaign, MdChevronLeft, MdChevronRight, MdFilterList, MdHelpOutline, MdLock, MdLogin, MdMailOutline, MdNotificationsNone, MdSearch, MdSettings, MdSportsSoccer, MdVerifiedUser } from "react-icons/md";
 export const appIcons = {
   brand: MdSportsSoccer,
   notifications: MdNotificationsNone,

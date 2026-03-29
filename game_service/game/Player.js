@@ -6,7 +6,7 @@ class Player {
     this.vx = 0
     this.vy = 0
     this.radius = 15
-    this.speed = 0.5
+    this.speed = 0.275
     this.friction = 0.9
     this.team = team 
     this.input = {}

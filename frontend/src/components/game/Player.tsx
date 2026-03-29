@@ -1,6 +1,5 @@
 import { PLAYER_RADIUS } from "../../constants/game";
 import type { PlayerState } from "../../types/game";
-
 interface Props extends PlayerState {
   isMe: boolean;
 }
@@ -23,7 +22,7 @@ export default function Player({ x, y, name, team, isMe }: Props) {
 
   return (
     <g style={{ filter: shadow }}>
-      {/* ── Glow ring for local player ── */}
+      
       {isMe && (
         <circle
           cx={x} cy={y} r={r + 5}
@@ -34,7 +33,7 @@ export default function Player({ x, y, name, team, isMe }: Props) {
         />
       )}
 
-      {/* ── Body ── */}
+      
       <circle
         cx={x} cy={y} r={r}
         fill={fill}
@@ -44,7 +43,7 @@ export default function Player({ x, y, name, team, isMe }: Props) {
         strokeWidth={isMe ? 2 : 1}
       />
 
-      {/* ── Name label below ── */}
+      
       <text
         x={x} y={y + r + 14}
         textAnchor="middle"

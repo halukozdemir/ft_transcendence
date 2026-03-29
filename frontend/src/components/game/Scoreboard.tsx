@@ -1,5 +1,4 @@
 import type { MatchState, ScoreState } from "../../types/game";
-
 interface Props {
   score: ScoreState;
   match: MatchState;
@@ -19,7 +18,7 @@ export default function Scoreboard({ score, match }: Props) {
       className="flex items-stretch bg-surface border border-border rounded-[1em] overflow-hidden select-none"
     >
 
-      {/* ── Red section ── */}
+      
       <div className="flex items-center gap-[0.75em] px-[1.2em] py-[0.6em]">
         <div className="flex flex-col items-end gap-[0.35em]">
           <span
@@ -45,10 +44,10 @@ export default function Scoreboard({ score, match }: Props) {
         </div>
       </div>
 
-      {/* ── Divider ── */}
+      
       <div style={{ margin: "0.75em 0" }} className="w-px bg-border" />
 
-      {/* ── Timer ── */}
+      
       <div className="flex items-center justify-center px-[1.8em]">
         <span
           style={{ fontSize: "1.35em", letterSpacing: "0.2em" }}
@@ -58,10 +57,10 @@ export default function Scoreboard({ score, match }: Props) {
         </span>
       </div>
 
-      {/* ── Divider ── */}
+      
       <div style={{ margin: "0.75em 0" }} className="w-px bg-border" />
 
-      {/* ── Blue section ── */}
+      
       <div className="flex items-center gap-[0.75em] px-[1.2em] py-[0.6em]">
         <div
           style={{ width: "2.75em", height: "2.75em", borderRadius: "0.55em" }}
@@ -76,7 +75,7 @@ export default function Scoreboard({ score, match }: Props) {
             style={{ fontSize: "0.68em", letterSpacing: "0.15em" }}
             className="text-team-blue font-semibold uppercase leading-none"
           >
-            Blue Team
+            Purple Team
           </span>
           <span
             style={{ fontSize: "1.35em" }}

@@ -1,6 +1,5 @@
 import { useNavigate } from "react-router";
 import { dashboardThemeVars } from "../../constants/appColors";
-
 const PrivacyPage = () => {
   const navigate = useNavigate();
 

@@ -1,5 +1,4 @@
 import type { CSSProperties } from "react";
-
 export const appColors = {
   primary: "#5a5af6",
   backgroundDark: "#0e0e0e",

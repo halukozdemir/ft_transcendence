@@ -1,4 +1,5 @@
 
+import { MdCalendarToday } from "react-icons/md";
 interface ProfileHeroData {
   username: string;
   level: number;
@@ -16,20 +17,20 @@ interface ProfileHeroProps {
 }
 
 function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("tr-TR", { year: "numeric", month: "long", day: "numeric" });
+  return new Date(dateStr).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
 }
 
 function lastSeenText(lastSeen: string | null, isOnline: boolean): string {
-  if (isOnline) return "Şu an çevrimiçi";
-  if (!lastSeen) return "Hiç görülmedi";
+  if (isOnline) return "Online now";
+  if (!lastSeen) return "Never seen";
   const diff = Math.floor((Date.now() - new Date(lastSeen).getTime()) / 1000);
-  if (diff < 60) return "Az önce çevrimdışı";
-  if (diff < 3600) return `${Math.floor(diff / 60)} dakika önce`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)} saat önce`;
-  return `${Math.floor(diff / 86400)} gün önce`;
+  if (diff < 60) return "Offline just now";
+  if (diff < 3600) return `${Math.floor(diff / 60)} minutes ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
+  return `${Math.floor(diff / 86400)} days ago`;
 }
 
-const ProfileHero = ({ profile, isOwnProfile }: ProfileHeroProps) => {
+const ProfileHero = ({ profile }: ProfileHeroProps) => {
   return (
     <section className="relative mb-8">
       <div className="h-64 sm:h-80 w-full rounded-2xl overflow-hidden relative group">
@@ -60,7 +61,7 @@ const ProfileHero = ({ profile, isOwnProfile }: ProfileHeroProps) => {
                 <h2 className="text-2xl sm:text-4xl font-bold text-white">{profile.username}</h2>
               </div>
               <p className="text-slate-300 text-sm sm:text-base mt-1">
-                Seviye {profile.level} • #{profile.rank.toLocaleString()} Küresel
+                Level {profile.level} • #{profile.rank.toLocaleString()} Global
               </p>
               <div className="flex flex-wrap items-center gap-3 mt-2">
                 <span className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border ${profile.isOnline ? "bg-emerald-500/20 border-emerald-500/30 text-emerald-400" : "bg-white/5 border-white/10 text-slate-400"}`}>
@@ -68,14 +69,14 @@ const ProfileHero = ({ profile, isOwnProfile }: ProfileHeroProps) => {
                   {lastSeenText(profile.lastSeen, profile.isOnline)}
                 </span>
                 <span className="flex items-center gap-1.5 text-xs text-slate-500">
-                  <span className="material-symbols-outlined text-sm">calendar_today</span>
-                  {formatDate(profile.dateJoined)} tarihinde katıldı
+                  <MdCalendarToday className="text-sm" />
+                  Joined on {formatDate(profile.dateJoined)}
                 </span>
               </div>
             </div>
           </div>
           <div className="flex gap-3 w-full sm:w-auto">
-            {/* Action buttons could go here */}
+            
           </div>
         </div>
       </div>

@@ -22,6 +22,7 @@ export interface ScoreState {
 export interface LobbyPlayer {
   id: string;
   clientId: string;
+  displayName?: string;
   team: TeamColor;
   ready: boolean;
 }

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { LuInfo, LuSendHorizontal, LuChevronDown, LuMessageSquare } from "react-icons/lu";
-
 type TeamColor = "red" | "blue" | "spectator";
 
 interface PlayerMessage {
@@ -180,12 +179,12 @@ export default function Chat({ roomName = "game", username = "Player" }: ChatPro
   return (
     <div className="flex flex-col gap-2 w-full">
 
-      {/* ── Ghost mode (closed) ── */}
+      
       <div className={`grid transition-all duration-300 ease-in-out ${!open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
         <div className="overflow-hidden">
           <div className="flex flex-col gap-1.5 px-1 pb-1">
 
-            {/* Floating messages */}
+            
             {ghosts.map((g) => (
               <div
                 key={g.ghostKey}
@@ -197,7 +196,7 @@ export default function Chat({ roomName = "game", username = "Player" }: ChatPro
               </div>
             ))}
 
-            {/* Minimal input — only visible when focused */}
+            
             <div className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-200 ${focused ? "bg-surface border border-border opacity-100" : "opacity-0 pointer-events-none"}`}>
               <input
                 type="text"
@@ -215,7 +214,7 @@ export default function Chat({ roomName = "game", username = "Player" }: ChatPro
               </button>
             </div>
 
-            {/* Reopen button */}
+            
             <button
               onClick={() => setOpen(true)}
               className="self-start flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface border border-border text-muted hover:text-white transition-colors text-xs cursor-pointer"
@@ -228,12 +227,12 @@ export default function Chat({ roomName = "game", username = "Player" }: ChatPro
         </div>
       </div>
 
-      {/* ── Open mode ── */}
+      
       <div className={`grid transition-all duration-300 ease-in-out ${open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
         <div className="overflow-hidden">
           <div className="flex flex-col gap-2 pb-1">
 
-            {/* Chatbox: header + messages */}
+            
             <div className="bg-surface border border-border rounded-2xl overflow-hidden">
               <button
                 onClick={() => setOpen(false)}
@@ -255,7 +254,7 @@ export default function Chat({ roomName = "game", username = "Player" }: ChatPro
               </div>
             </div>
 
-            {/* Input */}
+            
             <div className={`flex items-center gap-2 px-4 py-3.5 transition-colors ${focused ? "bg-surface border border-border rounded-2xl" : ""}`}>
               <input
                 type="text"
@@ -280,8 +279,6 @@ export default function Chat({ roomName = "game", username = "Player" }: ChatPro
     </div>
   );
 }
-
-
 
 function ChatMsg({ msg }: { msg: PlayerMessage }) {
   return (
@@ -309,7 +306,6 @@ function SystemMsg({ content }: { content: string }) {
     </div>
   );
 }
-
 
 function GhostChatMsg({ msg }: { msg: PlayerMessage }) {
   return (

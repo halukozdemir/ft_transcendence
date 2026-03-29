@@ -3,7 +3,6 @@ import type { GameState } from "../../types/game";
 import Field from "./Field";
 import Player from "./Player";
 import Ball from "./Ball";
-
 interface Props {
   state:      GameState | null;
   myPlayerId: string | null;
@@ -19,16 +18,15 @@ export default function GameCanvas({ state, myPlayerId }: Props) {
     >
       <Field />
 
-      {/* ── Players ── */}
+      
       {state?.players.map((p) => (
         <Player key={p.id} {...p} isMe={p.id === myPlayerId} />
       ))}
 
-      {/* ── Ball ── */}
+      
       {state?.ball && <Ball x={state.ball.x} y={state.ball.y} />}
 
-
-      {/* ── Waiting overlay ── */}
+      
       {!state && (
         <text
           x={CX} y={CY}

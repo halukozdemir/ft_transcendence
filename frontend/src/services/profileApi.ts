@@ -1,7 +1,4 @@
-/**
- * Profile & Social API Client
- * Extended endpoints for profile, friends, blocking, and statistics
- */
+
 
 export interface Friend {
   id: number;
@@ -23,6 +20,8 @@ export interface ProfileStats {
   wins: number;
   losses: number;
   win_rate: number;
+  goals_scored: number;
+  goals_per_game: number;
   xp: number;
   level: number;
   ranking: number;

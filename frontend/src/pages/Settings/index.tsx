@@ -1,8 +1,8 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router";
+import { MdPhotoCamera } from "react-icons/md";
 import { useAuth } from "../../context/authContext";
 import { authApi } from "../../services/authApi";
-
 const SettingsPage = () => {
   const { user, accessToken, logout, refreshProfile } = useAuth();
   const navigate = useNavigate();
@@ -56,14 +56,14 @@ const SettingsPage = () => {
         banner: bannerFile || undefined,
       });
       await refreshProfile();
-      setProfileMsg({ type: "ok", text: "Profil güncellendi." });
+      setProfileMsg({ type: "ok", text: "Profile updated." });
       setUsername(updatedProfile.username);
       setAvatarPreview(updatedProfile.avatar || null);
       setBannerPreview(updatedProfile.banner || null);
       setAvatarFile(null);
       setBannerFile(null);
     } catch (err) {
-      setProfileMsg({ type: "err", text: err instanceof Error ? err.message : "Hata oluştu." });
+      setProfileMsg({ type: "err", text: err instanceof Error ? err.message : "An error occurred." });
     } finally {
       setProfileLoading(false);
     }
@@ -72,11 +72,11 @@ const SettingsPage = () => {
   const handlePasswordChange = async () => {
     if (!accessToken) return;
     if (!oldPassword || !newPassword || !newPassword2) {
-      setPasswordMsg({ type: "err", text: "Tüm alanlar zorunludur." });
+      setPasswordMsg({ type: "err", text: "All fields are required." });
       return;
     }
     if (newPassword !== newPassword2) {
-      setPasswordMsg({ type: "err", text: "Yeni şifreler eşleşmiyor." });
+      setPasswordMsg({ type: "err", text: "New passwords do not match." });
       return;
     }
     setPasswordLoading(true);
@@ -87,12 +87,12 @@ const SettingsPage = () => {
         new_password: newPassword,
         new_password2: newPassword2,
       });
-      setPasswordMsg({ type: "ok", text: "Şifre başarıyla değiştirildi." });
+      setPasswordMsg({ type: "ok", text: "Password changed successfully." });
       setOldPassword("");
       setNewPassword("");
       setNewPassword2("");
     } catch (err) {
-      setPasswordMsg({ type: "err", text: err instanceof Error ? err.message : "Hata oluştu." });
+      setPasswordMsg({ type: "err", text: err instanceof Error ? err.message : "An error occurred." });
     } finally {
       setPasswordLoading(false);
     }
@@ -101,7 +101,7 @@ const SettingsPage = () => {
   const handleDeleteAccount = async () => {
     if (!accessToken) return;
     if (!deletePassword) {
-      setDeleteMsg({ type: "err", text: "Şifrenizi girmelisiniz." });
+      setDeleteMsg({ type: "err", text: "You must enter your password." });
       return;
     }
     setDeleteLoading(true);
@@ -111,7 +111,7 @@ const SettingsPage = () => {
       await logout();
       navigate("/auth");
     } catch (err) {
-      setDeleteMsg({ type: "err", text: err instanceof Error ? err.message : "Hata oluştu." });
+      setDeleteMsg({ type: "err", text: err instanceof Error ? err.message : "An error occurred." });
     } finally {
       setDeleteLoading(false);
     }
@@ -124,13 +124,13 @@ const SettingsPage = () => {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10 space-y-8">
-      <h1 className="text-2xl font-bold text-white">Ayarlar</h1>
+      <h1 className="text-2xl font-bold text-white">Settings</h1>
 
-      {/* Profil */}
+      
       <section className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-5">
-        <h2 className="text-base font-bold text-white">Profil</h2>
+        <h2 className="text-base font-bold text-white">Profile</h2>
 
-        {/* Avatar */}
+        
         <div className="flex items-center gap-5">
           <div
             className="relative size-20 cursor-pointer rounded-full overflow-hidden border-2 border-white/10 bg-(--dashboard-border) shrink-0"
@@ -143,19 +143,19 @@ const SettingsPage = () => {
               onError={(e) => { (e.target as HTMLImageElement).src = "/profile.jpg"; }}
             />
             <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100 transition-opacity">
-              <span className="material-symbols-outlined text-white text-xl">photo_camera</span>
+              <MdPhotoCamera className="text-white text-xl" />
             </div>
           </div>
           <input ref={avatarRef} accept="image/*" className="hidden" onChange={handleAvatarChange} type="file" />
           <div>
-            <p className="text-sm font-semibold text-white">Profil Fotoğrafı</p>
-            <p className="text-xs text-slate-500 mt-0.5">Fotoğrafa tıklayarak değiştir</p>
+            <p className="text-sm font-semibold text-white">Profile Photo</p>
+            <p className="text-xs text-slate-500 mt-0.5">Click the photo to change it</p>
           </div>
         </div>
 
-        {/* Banner */}
+        
         <div>
-          <p className="text-sm font-semibold text-white mb-2">Kapak Fotoğrafı</p>
+          <p className="text-sm font-semibold text-white mb-2">Cover Photo</p>
           <div
             className="relative h-28 w-full cursor-pointer rounded-xl overflow-hidden border border-white/10 bg-(--dashboard-border)"
             onClick={() => bannerRef.current?.click()}
@@ -167,19 +167,19 @@ const SettingsPage = () => {
               onError={(e) => { (e.target as HTMLImageElement).src = "/banner.jpg"; }}
             />
             <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100 transition-opacity">
-              <span className="material-symbols-outlined text-white text-2xl">photo_camera</span>
+              <MdPhotoCamera className="text-white text-2xl" />
             </div>
           </div>
           <input ref={bannerRef} accept="image/*" className="hidden" onChange={handleBannerChange} type="file" />
         </div>
 
-        {/* Kullanıcı Adı */}
+        
         <div>
-          <label className={labelClass}>Kullanıcı Adı</label>
+          <label className={labelClass}>Username</label>
           <input
             className={inputClass}
             onChange={(e) => setUsername(e.target.value)}
-            placeholder="kullanici_adi"
+            placeholder="username"
             type="text"
             value={username}
           />
@@ -197,13 +197,13 @@ const SettingsPage = () => {
           onClick={handleProfileSave}
           type="button"
         >
-          {profileLoading ? "Kaydediliyor..." : "Kaydet"}
+          {profileLoading ? "Saving..." : "Save"}
         </button>
       </section>
 
-      {/* Şifre */}
+      
       <section className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-5">
-        <h2 className="text-base font-bold text-white">Şifre Değiştir</h2>
+        <h2 className="text-base font-bold text-white">Change Password</h2>
         <form
           className="space-y-5"
           onSubmit={(e) => {
@@ -221,7 +221,7 @@ const SettingsPage = () => {
             value={user?.username || ""}
           />
           <div>
-            <label className={labelClass}>Mevcut Şifre</label>
+            <label className={labelClass}>Current Password</label>
             <input
               className={inputClass}
               autoComplete="current-password"
@@ -232,7 +232,7 @@ const SettingsPage = () => {
             />
           </div>
           <div>
-            <label className={labelClass}>Yeni Şifre</label>
+            <label className={labelClass}>New Password</label>
             <input
               className={inputClass}
               autoComplete="new-password"
@@ -243,7 +243,7 @@ const SettingsPage = () => {
             />
           </div>
           <div>
-            <label className={labelClass}>Yeni Şifre Tekrar</label>
+            <label className={labelClass}>Confirm New Password</label>
             <input
               className={inputClass}
               autoComplete="new-password"
@@ -265,16 +265,16 @@ const SettingsPage = () => {
             disabled={passwordLoading}
             type="submit"
           >
-            {passwordLoading ? "Değiştiriliyor..." : "Şifreyi Değiştir"}
+            {passwordLoading ? "Changing..." : "Change Password"}
           </button>
         </form>
       </section>
 
-      {/* Hesap Silme */}
+      
       <section className="bg-red-500/5 border border-red-500/20 rounded-2xl p-6 space-y-4">
-        <h2 className="text-base font-bold text-red-400">Hesap Silme</h2>
+        <h2 className="text-base font-bold text-red-400">Delete Account</h2>
         <p className="text-sm text-slate-400">
-          Hesabınızı silerseniz tüm verileriniz kalıcı olarak silinir ve bu işlem geri alınamaz.
+          If you delete your account, all your data will be permanently removed and this action cannot be undone.
         </p>
 
         {!deleteConfirm ? (
@@ -283,7 +283,7 @@ const SettingsPage = () => {
             onClick={() => setDeleteConfirm(true)}
             type="button"
           >
-            Hesabımı Sil
+            Delete My Account
           </button>
         ) : (
           <form
@@ -303,7 +303,7 @@ const SettingsPage = () => {
               value={user?.username || ""}
             />
             <div>
-              <label className={labelClass + " text-red-400"}>Onaylamak için şifrenizi girin</label>
+              <label className={labelClass + " text-red-400"}>Enter your password to confirm</label>
               <input
                 className={inputClass + " border-red-500/30 focus:border-red-500"}
                 autoComplete="current-password"
@@ -324,14 +324,14 @@ const SettingsPage = () => {
                 disabled={deleteLoading}
                 type="submit"
               >
-                {deleteLoading ? "Siliniyor..." : "Kalıcı Olarak Sil"}
+                {deleteLoading ? "Deleting..." : "Delete Permanently"}
               </button>
               <button
                 className="cursor-pointer rounded-lg border border-white/10 px-5 py-2.5 text-sm font-semibold text-slate-400 hover:text-white transition-colors"
                 onClick={() => { setDeleteConfirm(false); setDeletePassword(""); setDeleteMsg(null); }}
                 type="button"
               >
-                Vazgeç
+                Cancel
               </button>
             </div>
           </form>

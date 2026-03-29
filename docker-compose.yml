@@ -30,16 +30,10 @@ services:
 
   # ========== 2. Frontend (React SPA) ==========
   frontend:
-    image: node:20-alpine
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     container_name: ft_frontend
-    working_dir: /app
-    environment:
-      - VITE_HMR_HOST=${VITE_HMR_HOST:-}
-      - VITE_HMR_CLIENT_PORT=${GATEWAY_HTTPS_PORT:-8443}
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    command: sh -c "npm install --silent && npm run dev"
     networks:
       - frontend_net
     restart: unless-stopped

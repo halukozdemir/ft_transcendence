@@ -9,6 +9,7 @@ export interface Room {
   maxPlayers: number;
   pingMs: number;
   isLocked?: boolean;
+  matchStatus?: "waiting" | "lobby" | "in_progress" | "finished";
   isVerified?: boolean;
   health: RoomHealth;
 }

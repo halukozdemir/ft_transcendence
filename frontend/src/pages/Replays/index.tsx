@@ -5,7 +5,6 @@ import { dashboardThemeVars } from "../../constants/appColors";
 import { useAuth } from "../../context/authContext";
 import { profileApi } from "../../services/profileApi";
 import AppIcon from "../../components/ui/AppIcon";
-
 const ReplaysPage = () => {
   const navigate = useNavigate();
   const { user, accessToken } = useAuth();
@@ -23,7 +22,7 @@ const ReplaysPage = () => {
       try {
         setLoading(true);
         const data = await profileApi.getMatchHistory(Number(userId), accessToken, 50);
-        setMatches(data);
+        setMatches(data.results);
         setError(null);
       } catch (err) {
         const message = err instanceof Error ? err.message : "Failed to load match history";
@@ -58,7 +57,7 @@ const ReplaysPage = () => {
 
   return (
     <div className="min-h-screen bg-[var(--dashboard-bg)]" style={dashboardThemeVars}>
-      {/* Header */}
+      
       <header className="sticky top-0 z-50 border-b border-[var(--dashboard-border)] bg-[color:rgba(21,25,33,0.9)] backdrop-blur-md px-4 py-4 md:px-6">
         <div className="flex items-center justify-between">
           <button
@@ -79,7 +78,7 @@ const ReplaysPage = () => {
         </div>
       </header>
 
-      {/* Content */}
+      
       <main className="max-w-4xl mx-auto px-4 py-8">
         {error && (
           <div className="bg-red-500/10 border border-red-500/50 text-red-400 rounded-lg p-4 mb-6">
@@ -94,7 +93,7 @@ const ReplaysPage = () => {
               className="bg-[var(--dashboard-card)] border border-[var(--dashboard-border)] rounded-lg p-4 hover:border-[var(--dashboard-primary)]/50 transition-colors"
             >
               <div className="grid grid-cols-12 gap-4 items-center">
-                {/* Result Badge */}
+                
                 <div className="col-span-2">
                   {match.result === "win" ? (
                     <div className="inline-block px-3 py-1 rounded-lg bg-green-500/20 text-green-400 font-bold text-sm">
@@ -111,7 +110,7 @@ const ReplaysPage = () => {
                   )}
                 </div>
 
-                {/* Score */}
+                
                 <div className="col-span-2 text-center">
                   <div className="flex items-center justify-center gap-2">
                     <span className="text-2xl font-bold text-white">{match.my_score}</span>
@@ -120,7 +119,7 @@ const ReplaysPage = () => {
                   </div>
                 </div>
 
-                {/* Opponent */}
+                
                 <div className="col-span-4 flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full border border-[var(--dashboard-primary)]/50 overflow-hidden bg-[var(--dashboard-border)] flex-shrink-0">
                     {match.opponent_avatar ? (
@@ -140,7 +139,7 @@ const ReplaysPage = () => {
                   </div>
                 </div>
 
-                {/* Duration & Date */}
+                
                 <div className="col-span-4 text-right">
                   <p className="text-xs text-slate-500">
                     {formatDuration(match.duration_seconds)} • {formatDate(match.played_at)}

@@ -5,6 +5,7 @@ from .moderation import moderate_text
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
+        # Route each socket to a room-specific broadcast group.
         self.room_name = self.scope['url_route']['kwargs']['room_name']
         self.room_group_name = f'chat_{self.room_name}'
 
@@ -29,6 +30,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         if not message:
             return
 
+        # Run moderation before fan-out so all recipients see identical sanitized content.
         result = await moderate_text(message)
         moderated = result['flagged']
         message = result['censored'] if moderated else message

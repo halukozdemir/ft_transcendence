@@ -1,13 +1,11 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { useAuth } from "../../context/authContext";
-import AppIcon from "../ui/AppIcon";
 import ProfileDrawer from "./ProfileDrawer";
-
 const NAV_LINKS = [
-  { label: "Lobi",        path: "/"            },
-  { label: "Arkadaşlar",  path: "/friends"     },
-  { label: "Liderlik Tablosu", path: "/leaderboard" },
+  { label: "Lobby",       path: "/"            },
+  { label: "Friends",     path: "/friends"     },
+  { label: "Leaderboard", path: "/leaderboard" },
 ];
 
 const Navbar = () => {
@@ -23,7 +21,7 @@ const Navbar = () => {
       <header className="sticky top-0 z-50 border-b border-(--dashboard-border) bg-[rgba(14,14,14,0.85)] backdrop-blur-md">
         <div className="mx-auto flex w-full max-w-360 items-center justify-between gap-3 px-4 py-3">
 
-          {/* Brand */}
+          
           <div className="flex items-center gap-3">
             <button
               className="cursor-pointer flex items-center gap-2 text-(--dashboard-primary)"
@@ -54,15 +52,8 @@ const Navbar = () => {
             </nav>
           </div>
 
-          {/* Right side */}
+          
           <div className="flex items-center gap-3">
-            <button
-              className="cursor-pointer rounded-lg p-2 text-slate-400 transition-colors hover:bg-(--dashboard-border)"
-              type="button"
-              aria-label="Bildirimler"
-            >
-              <AppIcon name="notifications" size={22} />
-            </button>
 
             <button
               className="cursor-pointer grid size-8 place-items-center overflow-hidden rounded-full bg-(--dashboard-primary) text-xs font-bold text-white shadow-[0_0_14px_rgba(90,90,246,0.35)] transition-transform hover:scale-105"

@@ -7,6 +7,7 @@ _initialized = False
 
 
 def _ensure_initialized():
+    """Lazily load profanity dictionaries once, including custom Turkish words."""
     global _initialized
     if _initialized:
         return
@@ -26,6 +27,7 @@ def _ensure_initialized():
 
 
 def check_text(text: str) -> dict:
+    """Return moderation result with flagged state and censored variant for input text."""
     _ensure_initialized()
 
     if not text or not text.strip():

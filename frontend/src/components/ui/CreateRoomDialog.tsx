@@ -1,5 +1,5 @@
 import { useState } from "react";
-
+import { MdClose } from "react-icons/md";
 interface CreateRoomDialogProps {
   open: boolean;
   onClose: () => void;
@@ -26,11 +26,11 @@ const CreateRoomDialog = ({ open, onClose, onCreate }: CreateRoomDialogProps) =>
 
   const handleSubmit = async () => {
     if (!title.trim()) {
-      setError("Oda adı zorunludur.");
+      setError("Room name is required.");
       return;
     }
     if (isLocked && !password.trim()) {
-      setError("Şifreli oda için şifre girmelisiniz.");
+      setError("You must enter a password for a private room.");
       return;
     }
     try {
@@ -38,7 +38,7 @@ const CreateRoomDialog = ({ open, onClose, onCreate }: CreateRoomDialogProps) =>
       await onCreate({ title: title.trim(), maxPlayers, isLocked, password: password.trim() });
       handleClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Oda oluşturulamadı.");
+      setError(err instanceof Error ? err.message : "Room could not be created.");
     }
   };
 
@@ -58,34 +58,34 @@ const CreateRoomDialog = ({ open, onClose, onCreate }: CreateRoomDialogProps) =>
 
   return (
     <>
-      {/* Backdrop */}
+      
       <div
         className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
         onClick={handleClose}
       />
 
-      {/* Dialog */}
+      
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
         <div className="w-full max-w-md rounded-2xl bg-[var(--dashboard-card)] border border-white/10 shadow-2xl pointer-events-auto">
 
-          {/* Header */}
+          
           <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
-            <h2 className="text-base font-bold text-white">Oda Oluştur</h2>
+            <h2 className="text-base font-bold text-white">Create Room</h2>
             <button
               className="cursor-pointer rounded-lg p-1.5 text-slate-400 hover:bg-white/5 hover:text-white transition-colors"
               onClick={handleClose}
               type="button"
             >
-              <span className="material-symbols-outlined text-xl">close</span>
+              <MdClose className="text-xl" />
             </button>
           </div>
 
-          {/* Body */}
+          
           <div className="px-6 py-5 space-y-5">
 
-            {/* Oda Adı */}
+            
             <div>
-              <label className={labelClass}>Oda Adı</label>
+              <label className={labelClass}>Room Name</label>
               <input
                 autoFocus
                 className={inputClass}
@@ -97,9 +97,9 @@ const CreateRoomDialog = ({ open, onClose, onCreate }: CreateRoomDialogProps) =>
               />
             </div>
 
-            {/* Maksimum Oyuncu */}
+            
             <div>
-              <label className={labelClass}>Maksimum Oyuncu</label>
+              <label className={labelClass}>Maximum Players</label>
               <div className="grid grid-cols-6 gap-2">
                 {MAX_PLAYERS_OPTIONS.map((n) => (
                   <button
@@ -107,7 +107,7 @@ const CreateRoomDialog = ({ open, onClose, onCreate }: CreateRoomDialogProps) =>
                     className={[
                       "cursor-pointer rounded-xl py-3 text-sm font-black transition-all",
                       maxPlayers === n
-                        ? "dashboard-primary-gradient text-white shadow-[0_0_16px_rgba(90,90,246,0.35)]"
+                        ? "bg-[linear-gradient(135deg,var(--dashboard-primary),#7a6bff)] text-white shadow-[0_0_16px_rgba(90,90,246,0.35)]"
                         : "bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 hover:border-white/20",
                     ].join(" ")}
                     onClick={() => setMaxPlayers(n)}
@@ -119,11 +119,11 @@ const CreateRoomDialog = ({ open, onClose, onCreate }: CreateRoomDialogProps) =>
               </div>
             </div>
 
-            {/* Şifreli */}
+            
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold text-white">Özel Oyun</p>
-                <p className="text-xs text-slate-500 mt-0.5">Odaya girmek için şifre gereksin</p>
+                <p className="text-sm font-semibold text-white">Private Room</p>
+                <p className="text-xs text-slate-500 mt-0.5">Password required to join the room</p>
               </div>
               <button
                 className={[
@@ -142,10 +142,10 @@ const CreateRoomDialog = ({ open, onClose, onCreate }: CreateRoomDialogProps) =>
               </button>
             </div>
 
-            {/* Şifre */}
+            
             {isLocked && (
               <div>
-                <label className={labelClass}>Şifre</label>
+                <label className={labelClass}>Password</label>
                 <input
                   className={inputClass}
                   autoComplete="new-password"
@@ -162,14 +162,14 @@ const CreateRoomDialog = ({ open, onClose, onCreate }: CreateRoomDialogProps) =>
             )}
           </div>
 
-          {/* Footer */}
+          
           <div className="border-t border-white/10 px-6 py-4">
             <button
-              className="cursor-pointer w-full rounded-xl py-2.5 text-sm font-bold dashboard-primary-gradient text-white hover:brightness-110 transition-all active:scale-95"
+              className="cursor-pointer w-full rounded-xl py-2.5 text-sm font-bold bg-[linear-gradient(135deg,var(--dashboard-primary),#7a6bff)] text-white hover:brightness-110 transition-all active:scale-95"
               onClick={handleSubmit}
               type="button"
             >
-              Oluştur
+              Create
             </button>
           </div>
 

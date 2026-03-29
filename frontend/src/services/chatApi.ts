@@ -1,7 +1,4 @@
-/**
- * Chat Service API Client
- * REST endpoints for chat rooms, messages, and members
- */
+
 
 export interface ChatMessage {
   id: number;

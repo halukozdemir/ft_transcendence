@@ -37,6 +37,7 @@ class GameRoom {
         }
         this.readyPlayers = new Set() 
         this.onMatchFinished = typeof options.onMatchFinished === "function" ? options.onMatchFinished : null
+        this.resolveDisplayName = typeof options.resolveDisplayName === "function" ? options.resolveDisplayName : null
 
         const requestedTitle = typeof options.title === "string" ? options.title.trim() : ""
         this.title = requestedTitle.length > 0 ? requestedTitle : "Quick Match"
@@ -211,6 +212,11 @@ class GameRoom {
             this.pendingKicks.delete(id)
             this.playerCount--
 
+            if (this.match.status === "lobby" && this.playerCount > 0) {
+                // Any leave in lobby invalidates everyone else's ready state.
+                this.readyPlayers.clear()
+            }
+
             if (this.match.status === "in_progress" && !options.suppressMatchEnd) {
                 const disconnectedTeamCount = this.getTeamPlayerCount(removedPlayer.team)
                 if (disconnectedTeamCount < 1) {
@@ -265,8 +271,12 @@ class GameRoom {
         const clientId = this.socketToClient[id]
         if (!clientId) return { ok: false, reason: "client_not_found" }
 
-        if (this.readyPlayers.has(clientId)) {
-            this.readyPlayers.delete(clientId)
+        const wasReady = this.readyPlayers.has(clientId)
+
+        // Marking ready should preserve others' ready state.
+        // Cancelling ready invalidates all ready states.
+        if (wasReady) {
+            this.readyPlayers.clear()
         } else {
             this.readyPlayers.add(clientId)
         }
@@ -282,12 +292,24 @@ class GameRoom {
         return clientId ? this.readyPlayers.has(clientId) : false
     }
 
+    getDisplayName(clientId) {
+        if (!clientId) return "Player"
+        if (this.resolveDisplayName) {
+            const resolved = this.resolveDisplayName(clientId)
+            if (typeof resolved === "string" && resolved.trim().length > 0) {
+                return resolved.trim().slice(0, 40)
+            }
+        }
+        return `Player #${String(clientId).slice(0, 8)}`
+    }
+
     getLobbySnapshot() {
         const players = Object.entries(this.players).map(([socketId, player]) => {
             const clientId = this.socketToClient[socketId]
             return {
                 id: socketId,
                 clientId,
+                displayName: this.getDisplayName(clientId),
                 team: player.team,
                 ready: clientId ? this.readyPlayers.has(clientId) : false,
             }
@@ -364,6 +386,7 @@ class GameRoom {
 
         this.simulationTick++
 
+        // Integrate player movement first, then resolve pairwise collisions.
         Object.values(this.players).forEach((player) => {
             player.update(this.width, this.height)
         })
@@ -376,12 +399,14 @@ class GameRoom {
         }
 
         for (let iteration = 0; iteration < 5; iteration++) {
+            // Multiple solver passes reduce overlap jitter under tight contacts.
             Object.values(this.players).forEach((player) => {
                 checkCollision(player, this.ball)
             })
         }
 
         this.pendingKicks.forEach((ticksRemaining, id) => {
+            // Replay kick impulse for a few ticks so short key taps still register.
             const player = this.players[id]
             if (player) {
                 handleKick(player, this.ball)
@@ -418,6 +443,7 @@ class GameRoom {
         }
 
         if (ball.x - ball.radius < 0) {
+            // Left boundary also acts as blue scoring gate in the goal window.
             if (ball.y > goalTop && ball.y < goalBottom) {
                 this.score.blue++
                 if (this.score.blue >= this.rules.scoreLimit) {
@@ -432,6 +458,7 @@ class GameRoom {
         }
 
         if (ball.x + ball.radius > this.width) {
+            // Right boundary also acts as red scoring gate in the goal window.
             if (ball.y > goalTop && ball.y < goalBottom) {
                 this.score.red++
                 if (this.score.red >= this.rules.scoreLimit) {
@@ -475,6 +502,7 @@ class GameRoom {
         const allReady = this.playerCount > 0 && this.readyPlayers.size === this.playerCount
 
         if (teamsEqual && allReady) {
+            // Match start requires symmetric teams and explicit readiness from everyone.
             this.match.status = "in_progress"
             this.match.startedAt = Date.now()
             this.match.endedAt = null
@@ -525,6 +553,7 @@ class GameRoom {
         this.resetPlayersControlState()
 
         if (this.onMatchFinished) {
+            // Emit compact persistence payload for auth service match/stat storage.
             const redPlayerIds = this.getTeamPlayers("red").map((p) => this.socketToClient[p.id]).filter(Boolean)
             const bluePlayerIds = this.getTeamPlayers("blue").map((p) => this.socketToClient[p.id]).filter(Boolean)
             this.onMatchFinished({
@@ -643,6 +672,7 @@ class GameRoom {
     }
 
     getBroadcastState() {
+        // Keep network payload minimal and deterministic for high-frequency broadcast.
         return {
             players: Object.values(this.players).map((p) => ({
                 id: p.id,

@@ -11,7 +11,6 @@ import SettingsPage from "../pages/Settings";
 import TermsPage from "../pages/Terms";
 import PrivacyPage from "../pages/Privacy";
 import ProtectedRoute from "../components/auth/ProtectedRoute";
-
 const withLayout = (element: React.ReactNode) => (
   <ProtectedRoute>
     <MainLayout>{element}</MainLayout>

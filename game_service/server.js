@@ -127,7 +127,7 @@ const io = new Server(server, {
 
 io.use((socket, next) => {
   const token = socket.handshake.auth?.token || socket.handshake.query?.token;
-  
+  // Enforce JWT authentication at handshake time for every websocket session.
   if (!token) {
     return next(new Error("No authentication token provided"));
   }
@@ -170,6 +170,7 @@ function getRoomHealth(room, lagMs) {
 }
 
 function mapRoomForLobby(room) {
+  // Build UI-friendly lobby metadata from internal room state.
   const roomInfo = room.getRoomInfo();
   const lagMs = Math.max(0, Date.now() - (room.lastSimulationAt || Date.now()));
   const hostRaw = roomInfo.host;
@@ -265,6 +266,11 @@ function createRoom(options = {}) {
     title: options.title,
     isLocked: Boolean(options.isLocked),
     password: typeof options.password === "string" ? options.password : "",
+    resolveDisplayName: (clientId) => {
+      const key = String(clientId || "").trim();
+      if (!key) return "Player";
+      return clientDisplayNames.get(key) || `Player #${key}`;
+    },
     onMatchFinished: (data) => reportMatchResult(data),
   });
   room.id = roomId;
@@ -301,6 +307,7 @@ function cleanupRoom(roomId) {
   room.emptySince = room.emptySince || now;
   const graceMs = room.hasSeenPlayers ? usedEmptyRoomGraceMs : emptyRoomGraceMs;
 
+  // Keep empty rooms alive briefly to avoid churn during reconnect spikes.
   if (now - room.emptySince >= graceMs) {
     rooms.delete(roomId);
     console.log(`Oda silindi: ${roomId}`);
@@ -327,7 +334,7 @@ io.on("connection", (socket) => {
   const roomPasswordRaw = socket.handshake.auth?.roomPassword || socket.handshake.query?.roomPassword;
   const roomPassword = typeof roomPasswordRaw === "string" ? roomPasswordRaw : "";
 
-  
+  // Replace stale socket for the same authenticated user to prevent ghost players.
   for (const [existingRoomId, room] of rooms) {
     const existingSocketId = room.getSocketIdByClientId(clientId);
     if (existingSocketId && existingSocketId !== socket.id) {
@@ -350,12 +357,17 @@ io.on("connection", (socket) => {
       return;
     }
 
+    if (room.match.status === "in_progress") {
+      emitJoinErrorAndDisconnect(socket, "room_in_progress", { roomId: requestedRoomId });
+      return;
+    }
+
     if (room.requiresPassword() && !room.validatePassword(roomPassword)) {
       emitJoinErrorAndDisconnect(socket, "room_invalid_password", { roomId: requestedRoomId });
       return;
     }
   } else {
-    
+    // Quick-match path: reuse a compatible public lobby before creating a new room.
     room = findJoinableRoom();
     if (!room) {
       room = createRoom();
@@ -468,7 +480,7 @@ io.on("connection", (socket) => {
         playerCount: r.playerCount,
       });
 
-      
+      // Broadcast departure only if the room still has active players.
       if (r.playerCount > 0) {
         io.to(rId).emit("state", r.getState());
       }
@@ -488,12 +500,14 @@ const simulationTickMs = 1000 / simulationFps;
 const broadcastTickMs = 1000 / broadcastFps;
 
 setInterval(() => {
+  // Fixed-rate physics step independent from network broadcast cadence.
   for (const [, room] of rooms) {
     room.update();
   }
 }, simulationTickMs);
 
 setInterval(() => {
+  // Broadcast latest snapshot and prune abandoned rooms on the same heartbeat.
   for (const [roomId, room] of rooms) {
     io.to(roomId).emit("state", room.getBroadcastState());
   }

@@ -1,5 +1,4 @@
 import type { Match } from "../../types/profile";
-
 interface MatchHistoryRowProps {
   match: Match;
   onClick?: (matchId: string) => void;

@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { MutableRefObject } from "react";
 import type { Socket } from "socket.io-client";
-
 interface DebugAPI {
   getPacketRate: () => number;
   getBufferSize: () => number;
@@ -164,7 +163,7 @@ export default function DebugPanel({ socketRef, debug, connected }: Props) {
 
   return (
     <div className="fixed bottom-3 right-3 z-50 w-80 max-h-[70vh] flex flex-col rounded-lg bg-black/85 backdrop-blur text-[11px] text-white/90 font-mono border border-white/10 shadow-2xl select-none">
-      {/* Header */}
+      
       <div className="flex items-center justify-between px-3 py-1.5 border-b border-white/10">
         <div className="flex gap-2">
           {(["net", "config", "log"] as Tab[]).map((t) => (
@@ -184,7 +183,7 @@ export default function DebugPanel({ socketRef, debug, connected }: Props) {
         </button>
       </div>
 
-      {/* Content */}
+      
       <div className="flex-1 overflow-y-auto p-3 space-y-1">
         {tab === "net" && (
           <>

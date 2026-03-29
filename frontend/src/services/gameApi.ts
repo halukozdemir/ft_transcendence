@@ -1,7 +1,4 @@
-/**
- * Game Service API Client
- * REST endpoints for game management
- */
+
 
 export interface GameRenderConfig {
   simulationFps: number;
@@ -62,7 +59,7 @@ export interface ActiveRoomEntry {
   availableSlots: number;
   pingMs: number;
   health: "healthy" | "warning" | "offline";
-  matchStatus: "waiting" | "in_progress" | "finished";
+  matchStatus: "waiting" | "lobby" | "in_progress" | "finished";
   teams: {
     red: number;
     blue: number;

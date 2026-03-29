@@ -3,7 +3,8 @@ class Ball {
         this.fieldWidth = fieldWidth
         this.fieldHeight = fieldHeight
         this.radius = 10
-        this.friction = 0.99
+        this.friction = 0.975
+        this.maxSpeed = 10.8
         this.reset()
     }
 
@@ -15,6 +16,13 @@ class Ball {
     }
 
     update() {
+        const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy)
+        if (speed > this.maxSpeed) {
+            const ratio = this.maxSpeed / speed
+            this.vx *= ratio
+            this.vy *= ratio
+        }
+
         this.x += this.vx
         this.y += this.vy
 

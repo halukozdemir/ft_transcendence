@@ -1,22 +1,21 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap");
 @import "tailwindcss";
 
 @theme {
-	/* ── Backgrounds ──────────────────────────── */
-	--color-bg:          #0e0e0e; /* page background          */
-	--color-surface:     #181818; /* card / panel background  */
-	--color-surface-alt: #222222; /* elevated surface (system msg, hover) */
+	
+	--color-bg:          #0e0e0e; 
+	--color-surface:     #181818; 
+	--color-surface-alt: #222222; 
 
-	/* ── Team & Role Colors ───────────────────── */
-	--color-team-red:    #ff4040; /* red team player name     */
-	--color-team-blue:   #a855f7; /* blue team player name    */
-	--color-spectator:   #8892a4; /* spectator / neutral      */
+	
+	--color-team-red:    #ff4040; 
+	--color-team-blue:   #a855f7; 
+	--color-spectator:   #8892a4; 
 
-	/* ── UI Colors ───────────────────────────── */
-	--color-system:      #818cf8; /* system message accent    */
-	--color-muted:       #4b5563; /* timestamps, placeholders */
-	--color-border:      #272727; /* dividers, subtle borders */
+	
+	--color-system:      #818cf8; 
+	--color-muted:       #4b5563; 
+	--color-border:      #272727; 
 }
 
 @layer base {

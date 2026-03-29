@@ -2,11 +2,9 @@ import { useMemo, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router";
 import Chat from "../../components/game/Chat";
 import GameScreen from "../../components/game/Screen";
-import DebugPanel from "../../components/game/DebugPanel";
 import { useGameSocket } from "../../hooks/useGameSocket";
 import { useGameInput } from "../../hooks/useGameInput";
 import { useAuth } from "../../context/authContext";
-
 const GameLayout = () => {
 	const location = useLocation();
 	const navigate = useNavigate();
@@ -22,7 +20,7 @@ const GameLayout = () => {
 		return sessionStorage.getItem(`game-room-password:${roomId}`) || undefined;
 	}, [roomId]);
 
-	const { state, myPlayerId, connected, joinError, socket, debug, switchTeam, toggleReady } = useGameSocket(accessToken, {
+	const { state, myPlayerId, connected, joinError, socket, switchTeam, toggleReady } = useGameSocket(accessToken, {
 		roomId,
 		roomPassword,
 		username: user?.username,
@@ -45,7 +43,7 @@ const GameLayout = () => {
 				{!connected && !joinError && (
 					<div className="shrink-0 rounded-xl border border-yellow-500/40 bg-yellow-500/10 px-3 py-2 text-sm text-yellow-200 flex items-center gap-2">
 						<span className="inline-block w-2 h-2 rounded-full bg-yellow-400 animate-pulse" />
-						Sunucuyla bağlantı kesildi. Yeniden bağlanmaya çalışılıyor...
+						Disconnected from server. Attempting to reconnect...
 					</div>
 				)}
 				<div className="flex-1 min-h-0 lg:absolute lg:inset-2 rounded-xl overflow-hidden">
@@ -65,7 +63,6 @@ const GameLayout = () => {
 					/>
 				</div>
 			</div>
-			<DebugPanel socketRef={socket} debug={debug} connected={connected} />
 		</div>
 	);
 }

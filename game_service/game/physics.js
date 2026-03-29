@@ -6,7 +6,7 @@
  */
 
 /**
- * Top sürme (Dribbling) - Elastic collision with momentum transfer
+ * Dribbling - Elastic collision with momentum transfer
  */
 function checkCollision(player, ball) {
     const dx = ball.x - player.x
@@ -47,7 +47,7 @@ function checkCollision(player, ball) {
 }
 
 /**
- * Topa vurma (Kicking) - X tuşuna basıldığında
+ * Kicking - When the X key is pressed
  */
 function handleKick(player, ball) {
     const dx = ball.x - player.x
@@ -76,7 +76,7 @@ function handleKick(player, ball) {
 }
 
 /**
- * Oyuncu-Oyuncu çarpışması
+ * Player-player collision
  */
 function checkPlayerCollision(player1, player2) {
     const dx = player2.x - player1.x

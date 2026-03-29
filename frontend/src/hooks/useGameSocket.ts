@@ -2,18 +2,26 @@ import { useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import type { GameState, PlayerState, BallState, LobbyState } from "../types/game";
 import { FX, FY, FW, FH } from "../constants/game";
-
-
 const SERVER_W = 800;
 const SERVER_H = 500;
-
 
 const INITIAL_RENDER_DELAY = 100;
 
 function transformState(raw: any): GameState {
+  const lobbyPlayersRaw = Array.isArray(raw.lobby?.players) ? raw.lobby.players : [];
+  const nameBySocketId = new Map<string, string>();
+  for (const lp of lobbyPlayersRaw) {
+    const socketId = typeof lp?.id === "string" ? lp.id : "";
+    if (!socketId) continue;
+    const displayName = typeof lp?.displayName === "string" && lp.displayName.trim().length > 0
+      ? lp.displayName.trim()
+      : (typeof lp?.clientId === "string" && lp.clientId.trim().length > 0 ? `Player #${lp.clientId}` : "Player");
+    nameBySocketId.set(socketId, displayName);
+  }
+
   const players = Object.values(raw.players || {}).map((p: any) => ({
     id: p.id,
-    name: p.team === "red" ? "Red" : "Blue",
+    name: nameBySocketId.get(String(p.id)) || (p.team === "red" ? "Red" : "Purple"),
     team: p.team as "red" | "blue",
     x: FX + (p.x / SERVER_W) * FW,
     y: FY + (p.y / SERVER_H) * FH,
@@ -50,7 +58,7 @@ function transformState(raw: any): GameState {
     score: raw.score,
     match: {
       redTeamName: "Red",
-      blueTeamName: "Blue",
+      blueTeamName: "Purple",
       round: 1,
       timeLeft: raw.match?.timeRemainingSeconds ?? 0,
       status: raw.match?.status ?? "lobby",
@@ -190,24 +198,28 @@ export function useGameSocket(accessToken?: string | null, options: UseGameSocke
     });
 
     socket.on("room_full", () => {
-      setJoinError("Oda dolu.");
+      setJoinError("Room is full.");
       console.warn("Room is full");
     });
 
     socket.on("room_not_found", () => {
-      setJoinError("Oda bulunamadı.");
+      setJoinError("Room not found.");
     });
 
     socket.on("room_invalid_password", () => {
-      setJoinError("Oda şifresi hatalı.");
+      setJoinError("Incorrect room password.");
+    });
+
+    socket.on("room_in_progress", () => {
+      setJoinError("Match already started. You can't join this room right now.");
     });
 
     socket.on("disconnect", () => {
       setConnected(false);
       if (joinedRef.current) {
-        setJoinError("Bağlantı koptu. Yeniden bağlanılıyor...");
+        setJoinError("Connection lost. Reconnecting...");
       } else if (options.roomId) {
-        setJoinError((prev: string | null) => prev || "Odaya katılamadı.");
+        setJoinError((prev: string | null) => prev || "Could not join room.");
       }
     });
 
@@ -218,11 +230,11 @@ export function useGameSocket(accessToken?: string | null, options: UseGameSocke
     socket.on("connect_error", (error: any) => {
       const message = String(error?.message || "").toLowerCase();
       if (message.includes("authentication failed") || message.includes("no authentication token")) {
-        setJoinError("Oturum doğrulaması başarısız.");
+        setJoinError("Session authentication failed.");
         return;
       }
       if (options.roomId && !joinedRef.current) {
-        setJoinError("Odaya katılamadı.");
+        setJoinError("Could not join room.");
       }
     });
 
@@ -232,6 +244,7 @@ export function useGameSocket(accessToken?: string | null, options: UseGameSocke
       const offset = serverOffsetRef.current;
 
       if (buffer.length >= 2 && offset !== null) {
+
         const currentServerTime = performance.now() + offset;
         const renderTime = currentServerTime - renderDelayRef.current;
 
@@ -261,6 +274,7 @@ export function useGameSocket(accessToken?: string | null, options: UseGameSocke
         }
 
         while (buffer.length > 5 && buffer[1].time < renderTime) {
+
           buffer.shift();
         }
       } else if (buffer.length === 1) {

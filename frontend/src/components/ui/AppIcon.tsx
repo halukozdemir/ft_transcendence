@@ -1,5 +1,4 @@
 import { appIcons, type AppIconName } from "../../constants/appIcons";
-
 interface AppIconProps {
   name: AppIconName;
   className?: string;
