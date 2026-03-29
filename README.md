@@ -1,433 +1,448 @@
+*This project has been created as part of the 42 curriculum by halozdem, fkuyumcu, emyildir, ayasar, aakyuz.*
+
 # ft_transcendence
 
-**Proje:** Web-Based Multiplayer Haxball Oyunu
-**Mimari:** Microservices (Docker)
-**Tech Stack:** React (Frontend) | Django & Node.js (Backend) | PostgreSQL (DB) | Nginx (Gateway) | Redis (WebSocket Broker)
+## Description
+
+**ft_transcendence** is a real-time multiplayer web application built as the final project of the 42 school curriculum. The project is a Haxball-inspired browser-based soccer game where players can compete against each other in real-time from separate computers.
+
+### Key Features
+
+- Real-time multiplayer gameplay powered by WebSockets (Socket.io)
+- 60 FPS server-side physics simulation with 30 FPS network broadcast
+- Configurable team sizes supporting 1v1 up to 3v3+ matches
+- Full user management: registration, login, profiles, avatars, and friends
+- In-game chat with AI-powered content moderation (text & image)
+- Player statistics, match history, achievements, and global leaderboard
+- Microservices architecture with 5 independent backend services
+- Nginx reverse proxy with SSL/TLS, CORS, and rate limiting
 
 ---
 
-## Mimari
+## Instructions
 
-Proje 6 ana servis + 1 veritabani + 1 cache/broker olarak Docker container'larinda calisir.
-Tum servisler tek bir PostgreSQL instance'i uzerindeki ayni veritabanina (`ft_transcendence`) baglanir.
+### Prerequisites
 
-```mermaid
-graph TB
-    subgraph Client["Browser - React + Vite"]
-        FE["frontend/src/"]
-        FE --> Services["services/<br/>authApi.ts | chatApi.ts<br/>gameApi.ts | profileApi.ts"]
-        FE --> Pages["pages/<br/>Auth, Dashboard, Game<br/>Profile, Settings, Leaderboard"]
-        FE --> WS_Client["useGameSocket.ts<br/>WebSocket client"]
-    end
+The following software must be installed before running the project:
 
-    subgraph Gateway["Nginx Gateway - gateway/nginx.conf"]
-        HTTPS["HTTPS :443<br/>SSL + Reverse Proxy"]
-    end
+| Tool           | Minimum Version | Purpose                       |
+|----------------|-----------------|-------------------------------|
+| Docker         | 24.x            | Container runtime             |
+| Docker Compose | 2.x             | Multi-container orchestration |
+| Make           | 4.x             | Build automation              |
+| OpenSSL        | 3.x             | SSL certificate generation    |
 
-    Services -->|"HTTPS"| HTTPS
-    WS_Client -->|"WSS"| HTTPS
+> **Note:** The project is fully containerized. No Python, Node.js, or database installations are required on the host machine.
 
-    HTTPS -->|"/api/auth/*"| AUTH
-    HTTPS -->|"/api/chat/*"| CHAT
-    HTTPS -->|"/api/game/*"| GAME_REST
-    HTTPS -->|"/ws/game/*"| GAME_WS
-    HTTPS -->|"/api/ai/*"| AI
-
-    subgraph AuthService["auth_service - Django + DRF :8000"]
-        AUTH["views.py — 17 endpoint<br/>register, login, profile, friends<br/>leaderboard, match-result"]
-        AUTH_MODELS["models.py<br/>User, PlayerStats<br/>MatchRecord, Achievement<br/>FriendRequest"]
-        AUTH_SER["serializers.py<br/>JSON serialization"]
-        AUTH --> AUTH_MODELS
-        AUTH --> AUTH_SER
-    end
-
-    subgraph ChatService["chat_service - Django + Channels :8003"]
-        CHAT["views.py — 11 endpoint<br/>rooms CRUD, messages<br/>join/leave, my_rooms"]
-        CHAT_WS["consumers.py<br/>WebSocket handler"]
-        CHAT_MODELS["models.py<br/>ChatRoom, ChatMessage<br/>ChatRoomMember"]
-        CHAT --> CHAT_MODELS
-        CHAT_WS --> CHAT_MODELS
-    end
-
-    subgraph GameService["game_service - Express + Socket.io :8001"]
-        GAME_REST["server.js — REST<br/>rooms list/create<br/>health, render-config"]
-        GAME_WS["server.js — Socket.io<br/>real-time game state<br/>input, matchmaking"]
-        GAME_LOGIC["game/<br/>GameRoom.js | Ball.js<br/>Player.js | physics.js"]
-        GAME_REST --> GAME_LOGIC
-        GAME_WS --> GAME_LOGIC
-    end
-
-    subgraph AIService["ai_service - FastAPI :8002"]
-        AI["main.py<br/>sadece /health<br/>henuz implement edilmedi"]
-    end
-
-    subgraph Databases["PostgreSQL + Redis"]
-        AUTH_DB[("auth_db<br/>Users, Stats<br/>Matches, Achievements")]
-        CHAT_DB[("chat_db<br/>Rooms, Messages<br/>Members")]
-        REDIS[("Redis :6379<br/>WebSocket Broker")]
-    end
-
-    AUTH_MODELS -->|"Django ORM"| AUTH_DB
-    CHAT_MODELS -->|"Django ORM"| CHAT_DB
-    CHAT_WS --> REDIS
-    GAME_WS -->|"HTTP POST<br/>match-result"| AUTH
-```
-
-### Servisler
-
-| # | Servis | Teknoloji | Port | Rol |
-|---|--------|-----------|------|-----|
-| 1 | **Gateway** | Nginx 1.25 | 80, 443 | Reverse proxy, SSL, routing |
-| 2 | **Frontend** | React 18 | 80 (internal) | SPA, oyun arayuzu |
-| 3 | **Auth Service** | Django 5 + DRF + Gunicorn | 8000 | Kayit, giris, JWT, profil |
-| 4 | **Game Service** | Node.js + Express + Socket.io | 8001 | Haxball oyun motoru, WebSocket |
-| 5 | **Chat Service** | Django 5 + Channels + Daphne | 8003 | Sohbet, DM, WebSocket |
-| 6 | **AI Service** | FastAPI + Uvicorn | 8002 | Avatar kontrolu, mesaj moderasyonu |
-| 7 | **PostgreSQL** | PostgreSQL 16 | 5432 | Tek DB — auth, game, chat tablolari |
-| 8 | **Redis** | Redis 7 | 6379 | WebSocket broker (Django Channels) |
-
-### Nginx Routing
-
-| Path | Hedef |
-|------|-------|
-| `/` | Frontend (React SPA) |
-| `/api/auth/*` | Auth Service |
-| `/api/game/*` | Game Service |
-| `/api/chat/*` | Chat Service |
-| `/api/ai/*` | AI Service |
-| `/ws/game/*` | Game Service (WebSocket) |
-| `/ws/chat/*` | Chat Service (WebSocket) |
-| `/media/*` | Statik dosyalar (avatarlar) |
-
----
-
-## Kurulum
-
-### Gereksinimler
-- Docker & Docker Compose
-- Make
-
-### Hizli Baslangic
+### Environment Setup
 
 ```bash
-# 1. Repo'yu klonla
+# 1. Clone the repository
 git clone <repo-url>
 cd ft_transcendence
 
-# 2. Environment dosyasini olustur
-cp env.example .env
+# 2. Create environment file from template
+cp .env.example .env
+```
 
-# 3. Tum servisleri baslat (SSL + build + start)
+Edit `.env` and configure the following variables:
+
+| Variable                              | Description                   | Default             |
+|---------------------------------------|-------------------------------|---------------------|
+| `DOMAIN`                              | Site domain                   | `localhost`         |
+| `DJANGO_SECRET_KEY`                   | Django secret key             |                     |
+| `DEBUG`                               | Debug mode (1=on, 0=off)      | `1`                 |
+| `POSTGRES_DB`                         | Database name                 | `ft_transcendence`  |
+| `POSTGRES_USER`                       | Database user                 |                     |
+| `POSTGRES_PASSWORD`                   | Database password             |                     |
+| `POSTGRES_HOST`                       | Database host                 | `postgres`          |
+| `POSTGRES_PORT`                       | Database port                 | `5432`              |
+| `REDIS_HOST`                          | Redis host                    | `redis_broker`      |
+| `REDIS_PORT`                          | Redis port                    | `6379`              |
+| `REDIS_PASSWORD`                      | Redis password                |                     |
+| `JWT_SECRET_KEY`                      | JWT signing key               |                     |
+| `JWT_ACCESS_TOKEN_LIFETIME_MINUTES`   | Access token lifetime (min)   | `60`                |
+| `JWT_REFRESH_TOKEN_LIFETIME_DAYS`     | Refresh token lifetime (days) | `7`                 |
+
+> **Security:** Never commit your `.env` file. Fill in all empty fields before running the project.
+
+### Running the Project
+
+```bash
+# Build SSL certificates, build images, and start all services
 make
+
+# Open the application in your browser
+# https://localhost
 ```
 
-Tarayicidan `https://localhost` adresini ac.
+> Accept the self-signed certificate warning in your browser for local development.
 
-### Environment Degiskenleri (.env)
+### Useful Commands
 
-| Degisken | Aciklama | Varsayilan |
-|----------|----------|------------|
-| `DOMAIN` | Site domain'i | `localhost` |
-| `DJANGO_SECRET_KEY` | Django secret key | `dev-secret-key-not-for-production` |
-| `DEBUG` | Debug modu (1=acik, 0=kapali) | `1` |
-| **PostgreSQL** | | |
-| `POSTGRES_DB` | Veritabani adi — tum servisler bunu kullanir | `ft_transcendence` |
-| `POSTGRES_USER` | DB kullanici adi | `ft_user` |
-| `POSTGRES_PASSWORD` | DB sifresi | `devpassword` |
-| `POSTGRES_HOST` | DB host (docker service adi) | `postgres` |
-| `POSTGRES_PORT` | DB port | `5432` |
-| **Redis** | | |
-| `REDIS_HOST` | Redis host | `redis_broker` |
-| `REDIS_PORT` | Redis port | `6379` |
-| `REDIS_PASSWORD` | Redis sifresi | `devpassword_redis` |
-| **JWT** | | |
-| `JWT_SECRET_KEY` | Token imzalama anahtari | `dev-jwt-secret-key` |
-| `JWT_ACCESS_TOKEN_LIFETIME_MINUTES` | Access token suresi (dk) | `60` |
-| `JWT_REFRESH_TOKEN_LIFETIME_DAYS` | Refresh token suresi (gun) | `7` |
-> **Not:** Tek PostgreSQL container'i kullaniliyor. `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` degiskenleri hem container'in kendisi hem de auth/chat/game servisleri tarafindan ortaklanir. Tum tablolar Django migrations ile yonetilir.
-
-### Komutlar
-
-| Komut | Aciklama |
-|-------|----------|
-| `make` | SSL + build + start |
-| `make up` | Servisleri baslat |
-| `make down` | Servisleri durdur |
-| `make restart` | Yeniden baslat |
-| `make logs` | Tum loglari goruntule |
-| `make logs-<servis>` | Tek servis logu (or: `make logs-auth_service`) |
-| `make clean` | Container, volume, image hepsini sil |
-| `make status` | Container durumlarini goster |
-| `make migrate-auth` | Auth DB migration |
-| `make migrate-chat` | Chat DB migration |
-| `make test` | Tum auth testlerini calistir |
-| `make test-auth T=test_login` | Belirli test dosyasini calistir |
-| `make superuser` | Django superuser olustur |
+| Command                        | Description                                    |
+|--------------------------------|------------------------------------------------|
+| `make`                         | SSL setup + build + start all services         |
+| `make up`                      | Start all services                             |
+| `make down`                    | Stop all services                              |
+| `make restart`                 | Restart all services                           |
+| `make status`                  | Show container status                          |
+| `make logs`                    | View logs for all services                     |
+| `make logs-auth_service`       | View logs for a specific service               |
+| `make migrate-auth`            | Run auth service database migrations           |
+| `make migrate-chat`            | Run chat service database migrations           |
+| `make test`                    | Run all auth service tests                     |
+| `make test-auth T=test_login`  | Run a specific test file                       |
+| `make superuser`               | Create a Django admin superuser                |
+| `make clean`                   | Remove all containers, volumes, and images     |
 
 ---
 
-## Public API
+## Resources
 
-Auth Service uzerinden REST API sunulmaktadir. Tum endpoint'ler `/api/auth/` altindadir.
+### Documentation & References
 
-### HTTP Method'lar
+| Resource                  | URL                                                      | Purpose                                         |
+|---------------------------|----------------------------------------------------------|-------------------------------------------------|
+| Docker Documentation      | https://docs.docker.com/                                 | Containerization and Docker Compose             |
+| Django Documentation      | https://docs.djangoproject.com/en/6.0/                   | Backend framework (auth & chat services)        |
+| Django ORM Queries        | https://docs.djangoproject.com/en/6.0/topics/db/queries/ | Database query construction                     |
+| React Documentation       | https://tr.legacy.reactjs.org/docs/getting-started.html  | Frontend SPA framework                          |
+| JavaScript Reference      | https://devdocs.io/javascript/                           | JavaScript language reference                   |
+| WebSockets Documentation  | https://websockets.readthedocs.io/en/stable/             | WebSocket protocol reference                    |
+| Haxball                   | https://www.haxball.com                                  | Game design inspiration and mechanics reference |
 
-| Method | Endpoint | Aciklama |
-|--------|----------|----------|
-| **GET** | `/api/auth/profile/` | Kullanici profili |
-| **GET** | `/api/auth/users/<id>/` | Public kullanici bilgisi |
-| **GET** | `/api/auth/users/<id>/stats/` | Oyuncu istatistikleri |
-| **GET** | `/api/auth/users/<id>/matches/` | Mac gecmisi |
-| **GET** | `/api/auth/users/<id>/achievements/` | Basarimlar |
-| **GET** | `/api/auth/friends/` | Arkadas listesi |
-| **GET** | `/api/auth/leaderboard/` | Skor tablosu |
-| **POST** | `/api/auth/register/` | Yeni kullanici kaydi |
-| **POST** | `/api/auth/login/` | Giris + JWT token |
-| **POST** | `/api/auth/logout/` | Cikis + token blacklist |
-| **POST** | `/api/auth/friends/add/` | Arkadas ekle |
-| **POST** | `/api/auth/token/refresh/` | JWT token yenile |
-| **PUT** | `/api/auth/profile/avatar/` | Avatar yukle |
-| **PUT** | `/api/auth/password/change/` | Sifre degistir |
-| **DELETE** | `/api/auth/friends/<user_id>/` | Arkadas cikar |
+### AI Usage
 
-### Authentication
+**Claude (Anthropic)** was used as an AI assistant throughout the development of this project. Specifically, AI assistance was used for:
 
-JWT Bearer Token ile korunmaktadir. Login/register sonrasi `access` ve `refresh` token donulur.
+- **Authentication system:** Designing the JWT authentication flow, writing Django models, serializers, and views for the auth service
+- **Database modeling:** Structuring PostgreSQL schemas for users, matches, achievements, and chat rooms
+- **AI moderation service:** Implementing the FastAPI-based content moderation service (text profanity detection and image NSFW classification logic)
+- **Test suite generation:** Writing unit tests for the auth service and AI service
+- **Bug fixing:** Identifying and resolving bugs in game physics, WebSocket handling, and API endpoint logic
+- **Project management:** Assisting with sprint planning, task breakdown, and tracking development progress
+- **Roadmap preparation:** Structuring the phased development roadmap and defining milestones for each phase
+- **Architecture optimization:** Consulting on microservices design decisions, inter-service communication patterns, database schema optimization, and performance trade-offs
+- **Documentation:** Structuring and writing technical documentation
 
-```
-Authorization: Bearer <access_token>
-```
-
-### Rate Limiting
-
-Tum endpoint'lere rate limiting uygulanmaktadir:
-
-| Kullanici Tipi | Limit |
-|----------------|-------|
-| Anonim (login olmamis) | 30 istek / dakika |
-| Authenticated (login olmus) | 100 istek / dakika |
-
-Limit asildiginda `429 Too Many Requests` + `Retry-After` header donulur.
+All AI-generated code and suggestions were reviewed, tested, and integrated by team members.
 
 ---
 
-## AI Service
+## Team Information
 
-Icerik moderasyonu icin FastAPI tabanli AI servisi. Docker internal network uzerinden diger servislerden erisilebilir.
-
-### Endpoint'ler
-
-| Method | Endpoint | Aciklama |
-|--------|----------|----------|
-| **GET** | `/api/ai/health` | Servis sagligi |
-| **POST** | `/api/ai/moderate/text` | Metin kufur filtreleme |
-| **POST** | `/api/ai/moderate/image` | Gorsel NSFW tespiti |
-
-### Metin Moderasyonu
-
-**Kufur filtreleme** — `better_profanity` kutuphanesi + ozel Turkce kelime listesi.
-
-```bash
-curl -X POST https://localhost/api/ai/moderate/text \
-  -H "Content-Type: application/json" \
-  -d '{"text": "ornek mesaj"}'
-```
-
-**Response:**
-```json
-{
-  "flagged": false,
-  "original": "ornek mesaj",
-  "censored": "ornek mesaj"
-}
-```
-
-Kufur tespit edilirse `flagged: true` doner ve `censored` alaninda sansurlu hali bulunur.
-
-Desteklenen diller:
-- **Ingilizce**: Dahili sozluk (~1600 kelime, leetspeak varyasyonlari dahil)
-- **Turkce**: Ozel `wordlists/tr_profanity.txt` dosyasi (~130 kelime)
-
-### Gorsel Moderasyonu
-
-**NSFW tespiti** — `Falconsai/nsfw_image_detection` modeli (Vision Transformer).
-
-```bash
-curl -X POST https://localhost/api/ai/moderate/image \
-  -F "file=@resim.jpg"
-```
-
-**Response:**
-```json
-{
-  "safe": true,
-  "nsfw_score": 0.03,
-  "normal_score": 0.97,
-  "label": "normal"
-}
-```
-
-`nsfw_score >= 0.7` ise `safe: false` ve `label: "nsfw"` doner.
+| Login         | Role            | Responsibilities                                                             |
+|---------------|-----------------|------------------------------------------------------------------------------|
+| **halozdem**  | Product Owner   | Auth system (JWT, register, login, logout), database schema, AI moderation   |
+| **fkuyumcu**  | Tech Lead       | Docker/DevOps, Nginx gateway, SSL, microservices infrastructure              |
+| **ayasar**    | Project Manager | Sprint planning (Notion), React frontend pages, UI components (Tailwind CSS) |
+| **aakyuz**    | Developer       | Profile management, chat backend (Channels), game mechanics                  |
+| **emyildir**  | Developer       | API integration (frontend services), game rendering, UI improvements         |
 
 ---
 
-## Test Suite
+## Project Management
 
-### Auth Service Testleri
+### Organization
 
-```bash
-# Tum auth testlerini calistir
-make test
+The team used **Notion** as the primary project management tool. Work was organized into weekly sprints with clearly defined tasks for each team member. A Kanban board tracked task status (To Do → In Progress → Done) across all sprints.
 
-# Belirli bir test dosyasi
-make test-auth T=test_login
-```
+### Meetings
 
-Mevcut test dosyalari (`auth_service/auth_app/tests/`):
+- **Weekly sync:** Every Monday evening via **Google Meet**
+- **Day-to-day communication:** **WhatsApp** group for quick decisions and blockers
 
-| Dosya | Kapsam |
-|-------|--------|
-| `test_register.py` | Kullanici kaydi, validasyon, duplicate kontrol |
-| `test_login.py` | Giris, yanlis sifre, JWT token |
-| `test_logout.py` | Cikis, token blacklist |
-| `test_profile.py` | Profil goruntuleme, guncelleme |
-| `test_password.py` | Sifre degistirme, validasyon |
-| `test_friends.py` | Arkadas ekleme, cikarma, listeleme |
+### Workflow
 
-### AI Service Testleri
-
-```bash
-# Container icinden calistir
-docker-compose exec ai_service pytest -v
-
-# Sadece metin moderasyonu
-docker-compose exec ai_service pytest tests/test_moderation.py -v
-
-# Sadece gorsel moderasyonu
-docker-compose exec ai_service pytest tests/test_image.py -v
-
-# Sadece API endpoint'leri
-docker-compose exec ai_service pytest tests/test_api.py -v
-```
-
-AI test dosyalari (`ai_service/tests/`):
-
-| Dosya | Test Sayisi | Kapsam |
-|-------|-------------|--------|
-| `test_moderation.py` | 15 | Turkce kufur tespiti, Ingilizce kufur tespiti, temiz metin, sansur dogrulugu, edge case'ler (bos string, None, uzun metin) |
-| `test_image.py` | 5 | Normal resim safe doner, response format kontrolu, nsfw_score araligi, gecersiz dosya, bos dosya |
-| `test_api.py` | 6 | GET /health, POST /moderate/text (temiz + kufur), POST /moderate/image (gecerli + dosyasiz), 422 validation hatalari |
+1. Tasks were created and assigned in Notion at the start of each sprint
+2. Progress was reviewed at the Monday meeting
+3. Blockers were discussed synchronously on Google Meet or asynchronously on WhatsApp
+4. Code was integrated via Git pull requests with peer review
 
 ---
 
-## Veritabani Yapisi
+## Technical Stack
 
-Tek PostgreSQL instance, tek `ft_transcendence` veritabani:
+### Frontend
 
-```
-ft_transcendence (PostgreSQL)
-├── Auth tablolari (Django migrations)
-│   ├── auth_app_user — kullanici, profil, arkadas listesi
-│   ├── auth_app_playerstats — oyuncu istatistikleri
-│   ├── auth_app_matchrecord — mac kayitlari
-│   ├── auth_app_matchplayer — mac oyunculari
-│   ├── auth_app_achievement — basarimlar
-│   └── auth_app_userachievement — kazanilan basarimlar
-└── Chat tablolari (Django migrations)
-    ├── chat_app_chatroom — sohbet odalari
-    ├── chat_app_chatmessage — mesajlar
-    └── chat_app_chatroommember — oda uyeleri
-```
+| Technology       | Version | Purpose                      |
+|------------------|---------|------------------------------|
+| React            | 19.2.0  | SPA framework                |
+| TypeScript       | 5.9.3   | Type-safe JavaScript         |
+| Vite             | 7.3.x   | Build tool and dev server    |
+| Tailwind CSS     | 4.2.0   | Utility-first CSS framework  |
+| React Router     | v7      | Client-side routing          |
+| Socket.io Client | 4.7.4   | Real-time game communication |
+| React Icons      | 5.6.0   | Icon library                 |
 
----
+### Backend Services
 
-## Proje Yapisi
+| Service       | Framework                      | Version          | Role                                                |
+|---------------|--------------------------------|------------------|-----------------------------------------------------|
+| Auth Service  | Django + DRF + Gunicorn        | 5.0 + 3.14       | User authentication, profiles, friends, leaderboard |
+| Game Service  | Node.js + Express + Socket.io  | 20 + 4.18 + 4.7  | Real-time game engine, physics simulation           |
+| Chat Service  | Django Channels + Daphne       | 5.0 + 4.0        | WebSocket-based real-time chat                      |
+| AI Service    | FastAPI + Uvicorn              | 0.109 + 0.27     | Content moderation (text & image)                   |
+| Gateway       | Nginx                          | 1.25             | Reverse proxy, SSL termination, request routing     |
 
-```
-ft_transcendence/
-├── gateway/              # Nginx reverse proxy
-│   ├── Dockerfile
-│   └── nginx.conf
-├── frontend/             # React SPA
-│   ├── Dockerfile
-│   ├── nginx.conf
-│   ├── src/
-│   └── package.json
-├── auth_service/         # Django - Auth & User
-│   ├── Dockerfile
-│   ├── auth_project/     # Django settings
-│   ├── auth_app/         # App logic
-│   │   ├── models.py     # User modeli
-│   │   ├── views.py      # Register, Login, Friends
-│   │   ├── serializers.py
-│   │   └── tests/        # Test suite
-│   └── requirements.txt
-├── game_service/         # Node.js - Game Engine
-│   ├── Dockerfile
-│   ├── server.js         # Express + Socket.io server
-│   ├── package.json
-│   └── game/             # Oyun motoru
-│       ├── GameRoom.js   # Oda yonetimi, skor, reset
-│       ├── Player.js     # Oyuncu fizigi, input
-│       ├── Ball.js       # Top fizigi
-│       └── physics.js    # Carpisma, vurus, momentum
-├── chat_service/         # Django Channels - Chat
-│   ├── Dockerfile
-│   ├── chat_project/     # Django settings
-│   ├── chat_app/         # App logic
-│   └── requirements.txt
-├── ai_service/           # FastAPI - AI Moderation
-│   ├── Dockerfile
-│   └── app/main.py
-├── ssl/                  # SSL sertifikalari (gitignore)
-├── docker-compose.yml
-├── Makefile
-├── env.example
-└── generate_ssl.sh
-```
+### Infrastructure
+
+| Technology     | Version | Purpose                                              |
+|----------------|---------|------------------------------------------------------|
+| Docker         | 24.x    | Service containerization                             |
+| Docker Compose | 2.x     | Multi-service orchestration                          |
+| PostgreSQL     | 16      | Primary relational database (shared by all services) |
+| Redis          | 7       | WebSocket channel layer broker for Django Channels   |
+
+### Technical Decisions
+
+- **Single PostgreSQL instance:** All services share one database to simplify infrastructure while keeping schema separation via Django's app-level migrations.
+- **Redis as broker:** Django Channels requires a channel layer backend for WebSocket state; Redis 7 provides low-latency pub/sub.
+- **Nginx as gateway:** All external traffic enters through Nginx, which enforces SSL, applies rate limiting (30 req/min anonymous, 100 req/min authenticated), and routes requests to the correct backend service.
+- **JWT Authentication:** Stateless token-based auth allows the game service and chat service to validate users without calling the auth service on every request.
+- **Microservices:** Each service has a single responsibility and can be scaled, restarted, or replaced independently.
 
 ---
 
-## Gelistirme Yol Haritasi
+## Database Schema
 
-### Adim 1: Altyapi
-- [x] Docker Compose ile tum servisleri ayaga kaldir
-- [x] Nginx gateway (SSL, routing, WebSocket)
-- [x] PostgreSQL veritabani (tek instance)
-- [x] Redis broker
-- [x] database/init.sql ile tablo semalari
+All tables are managed by Django ORM migrations. A single PostgreSQL instance (`ft_transcendence`) hosts schemas from both the auth and chat services.
 
-### Adim 2: Kullanici Yonetimi
-- [x] User modeli (email, avatar, online_status, friends)
-- [x] JWT authentication (login, register, refresh, logout)
-- [x] Profil ve avatar yonetimi
-- [x] Sifre degistirme
-- [x] Arkadas ekleme/cikarma
-- [x] Auth test suite (23 test)
+### Auth Service Tables
 
-### Adim 3: Oyun Cekirdegi
-- [x] Socket.io ile client-server iletisimi
-- [x] 60 FPS server-side game loop (30 FPS network broadcast)
-- [x] Fizik motoru (top, oyuncu, carpisma)
-- [x] Client tarafinda Canvas render
-- [ ] JWT token ile oyuncu dogrulama
-- [ ] Mac sonucu kaydetme
+```
+auth_app_user
+├── id (UUID, PK)
+├── email (unique)
+├── username (unique)
+├── password_hash
+├── avatar (image path)
+├── banner (image path)
+├── bio (text)
+├── online_status (boolean)
+├── last_seen (datetime)
+├── friends (M2M → self)
+└── blocked_users (M2M → self)
 
-### Adim 4: Oda ve Eslestirme
-- [ ] Room ID ile oda olusturma/katilma
-- [ ] Harita secimi
+auth_app_playerstats
+├── id (PK)
+├── user (FK → auth_app_user, 1:1)
+├── wins (int)
+├── losses (int)
+├── draws (int)
+├── xp (int)
+└── level = xp ÷ 100 + 1 (computed)
 
-### Adim 5: Chat ve Sosyal
-- [ ] WebSocket ile gercek zamanli sohbet
-- [ ] DM, kanal sistemi
-- [ ] AI mesaj moderasyonu
+auth_app_matchrecord
+├── id (PK)
+├── red_score (int)
+├── blue_score (int)
+├── duration (int, seconds)
+├── end_reason (score_limit | time_limit | forfeit | disconnect)
+└── created_at (datetime)
 
-### Adim 6: Istatistikler
-- [ ] Mac gecmisi kaydetme
-- [ ] Skor tablosu
-- [ ] Achievements
+auth_app_matchplayer
+├── id (PK)
+├── match (FK → auth_app_matchrecord)
+├── user (FK → auth_app_user)
+└── team (red | blue)
 
-### Adim 7: Cila
-- [ ] Avatar AI kontrolu
-- [ ] UI/UX iyilestirmeleri
-- [ ] Son testler
+auth_app_achievement
+├── id (PK)
+├── name (first_win | streak_5 | perfect_win | tournament_champion | unstoppable)
+└── description (text)
+
+auth_app_userachievement
+├── id (PK)
+├── user (FK → auth_app_user)
+├── achievement (FK → auth_app_achievement)
+└── unlocked_at (datetime)
+
+auth_app_friendrequest
+├── id (PK)
+├── from_user (FK → auth_app_user)
+├── to_user (FK → auth_app_user)
+├── status (pending | accepted | rejected)
+└── created_at (datetime)
+```
+
+### Chat Service Tables
+
+```
+chat_app_chatroom
+├── id (PK)
+├── name (unique)
+├── room_type (dm | channel | tournament)
+├── created_by (int, user ID)
+└── created_at (datetime)
+
+chat_app_chatmessage
+├── id (PK)
+├── room (FK → chat_app_chatroom)
+├── sender_id (int, user ID cache)
+├── content (text)
+├── message_type (regular | system | notification)
+├── is_flagged (boolean, AI moderation)
+├── edited_at (datetime, nullable)
+└── created_at (datetime)
+
+chat_app_chatroommember
+├── id (PK)
+├── room (FK → chat_app_chatroom)
+├── user_id (int)
+├── is_admin (boolean)
+├── is_muted (boolean)
+└── joined_at (datetime)
+```
+
+### Relationships
+
+- One `User` → One `PlayerStats` (1:1)
+- One `User` → Many `MatchPlayer` → Many `MatchRecord` (M2M through `MatchPlayer`)
+- One `User` → Many `UserAchievement` → Many `Achievement` (M2M through `UserAchievement`)
+- One `ChatRoom` → Many `ChatMessage` (1:N)
+- One `ChatRoom` → Many `ChatRoomMember` (1:N)
+
+---
+
+## Features List
+
+| Feature               | Description                                               | Developed By      |
+|-----------------------|-----------------------------------------------------------|-------------------|
+| User Registration     | Email-based account creation with validation              | halozdem          |
+| User Login / Logout   | JWT token issuance and blacklisting on logout             | halozdem          |
+| Token Refresh         | Stateless JWT access/refresh token rotation               | halozdem          |
+| User Profile          | View and edit username, bio, avatar, banner               | halozdem, aakyuz  |
+| Avatar Upload         | Image upload with AI NSFW validation                      | aakyuz            |
+| Password Change       | Secure password update with old password confirmation     | halozdem          |
+| Account Deletion      | Full account removal with password confirmation           | halozdem          |
+| Friend System         | Add, remove, and list friends; view online status         | aakyuz            |
+| Public User Profiles  | View any user's stats, matches, and achievements          | aakyuz            |
+| Player Statistics     | Wins, losses, draws, XP, level, win rate                  | aakyuz            |
+| Match History         | Per-user match records with scores, opponents, and dates  | aakyuz            |
+| Achievements          | Unlock badges (first win, streak, perfect win, etc.)      | aakyuz            |
+| Global Leaderboard    | Players ranked by XP                                      | halozdem          |
+| Real-time Game        | Haxball-inspired 2D soccer with physics simulation        | aakyuz, fkuyumcu  |
+| Remote Multiplayer    | Two players on separate computers via Socket.io           | aakyuz            |
+| Team Multiplayer      | Configurable team sizes (1v1 to 3v3+)                     | aakyuz            |
+| Game Rooms            | Create and join game rooms with configurable settings     | aakyuz            |
+| Game Physics          | Ball and player physics at 60 FPS server-side             | aakyuz            |
+| Match Reporting       | Game service posts match results to auth service          | aakyuz            |
+| Real-time Chat        | WebSocket-based room chat (DM, channels, tournament rooms)| aakyuz            |
+| Chat Moderation       | AI text profanity detection (English + Turkish)           | halozdem          |
+| Image Moderation      | NSFW avatar detection via Vision Transformer model        | halozdem          |
+| Microservices         | 5 independent backend services orchestrated via Docker    | fkuyumcu          |
+| Nginx Gateway         | SSL termination, reverse proxy, rate limiting             | fkuyumcu          |
+| Frontend SPA          | React single-page application with full routing           | ayasar, emyildir  |
+| API Integration       | Frontend service layer connecting all backend APIs        | emyildir          |
+| Test Suite            | 23 auth tests + 26 AI service tests                       | halozdem          |
+
+---
+
+## Modules
+
+### Point Calculation
+
+| Type            | Count  | Points Each | Total  |
+|-----------------|--------|-------------|--------|
+| Major           | 9      | 2           | 18     |
+| Minor           | 5      | 1           | 5      |
+| **Grand Total** | **14** |             | **23** |
+
+### Selected Modules
+
+#### IV.1 — Web
+
+| Type       | Module                                                | Implementation                                                                                                                               |
+|------------|-------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|
+| **Major**  | Use a framework for both the frontend and backend     | React (frontend) + Django (auth & chat) + Express (game) + FastAPI (AI)                                                                      |
+| **Minor**  | Use a frontend framework                              | React 19 with TypeScript and Vite                                                                                                            |
+| **Minor**  | Use a backend framework                               | Django 5 (DRF + Channels), Express 4.18, FastAPI 0.109                                                                                       |
+| **Major**  | Implement real-time features using WebSockets         | Socket.io for real-time game state; Django Channels for chat WebSockets                                                                      |
+| **Major**  | Allow users to interact with other users              | Chat rooms (DM + channels), user profiles, friends list with online status                                                                   |
+| **Major**  | A public API with secured API key, rate limiting, 5+  | 17 REST endpoints under `/api/auth/`; JWT Bearer authentication; rate limiting (30/min anon, 100/min auth); full documentation in this README |
+
+#### IV.3 — User Management
+
+| Type       | Module                                | Implementation                                                                    |
+|------------|---------------------------------------|-----------------------------------------------------------------------------------|
+| **Major**  | Standard user management and auth     | Email-based registration, JWT login/logout, profile CRUD, avatar upload           |
+| **Minor**  | Game statistics and match history     | PlayerStats model (wins/losses/XP/level), MatchRecord, achievements, leaderboard  |
+
+#### IV.4 — Artificial Intelligence
+
+| Type       | Module                                | Implementation                                                                                                           |
+|------------|---------------------------------------|--------------------------------------------------------------------------------------------------------------------------|
+| **Minor**  | Content moderation AI                 | FastAPI service using `better_profanity` + custom Turkish word list (~130 words); flags and censors messages automatically |
+| **Minor**  | Image recognition and tagging system  | `Falconsai/nsfw_image_detection` Vision Transformer model; NSFW score threshold 0.7; applied to avatar uploads           |
+
+#### IV.6 — Gaming and User Experience
+
+| Type       | Module                                  | Implementation                                                                                                              |
+|------------|-----------------------------------------|-----------------------------------------------------------------------------------------------------------------------------|
+| **Major**  | Implement a complete web-based game     | Haxball-inspired 2D soccer game; real-time physics (ball, player, collisions); win by score limit (5 goals) or time (180 s) |
+| **Major**  | Remote players                          | Two players on separate computers connected via Socket.io; state synced at 30 FPS                                           |
+| **Major**  | Multiplayer game (more than two players)| Configurable team sizes up to 3v3+; server-side room and team management                                                    |
+
+#### IV.7 — DevOps
+
+| Type       | Module                    | Implementation                                                                                                                                    |
+|------------|---------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Major**  | Backend as microservices  | 5 loosely-coupled services (auth, game, chat, AI, gateway) communicating via REST APIs and service-to-service secrets; each with its own Dockerfile |
+
+### Justification for Custom / Choice Modules
+
+**Content Moderation AI (Minor):** This module addresses a real production need — preventing toxic content in a multiplayer game environment. It goes beyond trivial keyword filtering by integrating a multilingual profanity detection library with a custom Turkish word list and exposing it as a standalone microservice with its own test suite. This adds meaningful safety infrastructure rather than cosmetic features.
+
+**Image Recognition and Tagging (Minor):** Avatar uploads in social gaming platforms are a common attack surface for inappropriate content. Instead of manual moderation, we integrated a pretrained Vision Transformer model (`Falconsai/nsfw_image_detection`) that classifies images automatically with a confidence score. This demonstrates real ML model integration — not just an API call to a third-party service — and protects all users without human review overhead.
+
+---
+
+## Individual Contributions
+
+### halozdem — Product Owner
+
+- Designed and implemented the complete authentication system: user registration, email-based login, JWT access/refresh token issuance, logout with token blacklisting
+- Built all Django models for the auth service: `User`, `PlayerStats`, `MatchRecord`, `MatchPlayer`, `Achievement`, `UserAchievement`, `FriendRequest`
+- Designed the PostgreSQL schema and managed Django migrations for the auth service
+- Implemented password change and account deletion endpoints
+- Built and integrated the AI moderation service (text profanity detection + image NSFW classification)
+- Wrote the full auth service test suite (23 tests) and AI service test suite (26 tests)
+- Defined product requirements, user stories, and acceptance criteria for all features
+
+### fkuyumcu — Tech Lead
+
+- Designed the overall microservices architecture and service communication contracts
+- Set up and maintained all Dockerfiles for every service (Python, Node.js, Nginx)
+- Configured Docker Compose with proper networking (frontend/backend networks), volumes, and health checks
+- Set up the Nginx gateway with SSL/TLS (self-signed certificates via `generate_ssl.sh`), reverse proxy routing, HSTS, rate limiting, and gzip compression
+- Managed Redis configuration as the Django Channels WebSocket broker
+- Created the `Makefile` with all build, test, migration, and utility commands
+- Ensured the microservices infrastructure met the DevOps module requirements
+
+### ayasar — Project Manager
+
+- Managed project planning, sprint organization, and task assignment in Notion
+- Facilitated weekly Monday meetings and tracked blockers
+- Developed the React frontend application: page routing with React Router, layout structure, and major UI pages (Dashboard, Leaderboard, Settings)
+- Implemented Tailwind CSS design system and reusable UI components (cards, buttons, dialogs)
+- Coordinated cross-team dependencies between frontend and backend development
+
+### aakyuz — Developer
+
+- Implemented user profile management: avatar/banner upload, profile editing, public profile views
+- Built the complete chat service backend: Django Channels consumers, ChatRoom/ChatMessage/ChatRoomMember models, REST endpoints for room CRUD, join/leave, message history
+- Developed core gameplay mechanics in the game service: `GameRoom.js` (room lifecycle, team assignment, score tracking), `Player.js` (physics), `Ball.js` (physics), `physics.js` (collision detection, kick mechanics)
+- Implemented the friend system (add, remove, block, list)
+- Implemented achievements, player stats, and match result recording
+- Integrated game service with auth service for posting match results via service-to-service API
+
+### emyildir — Developer
+
+- Built the frontend API service layer: `authApi.ts`, `gameApi.ts`, `chatApi.ts`, `profileApi.ts` connecting all React pages to backend services
+- Integrated JWT token management in the frontend (storage, refresh, protected routes)
+- Implemented the game rendering frontend: `GameCanvas` (SVG-based), `Field`, `Player`, `Ball`, `Scoreboard` components
+- Built `useGameSocket` hook for real-time game state synchronization
+- Implemented `useGameInput` hook for keyboard-based player controls
+- Made UI improvements across multiple pages (Profile, Friends, Game lobby)
